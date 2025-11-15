@@ -8,6 +8,12 @@ import { Logo } from '@/components/logo';
 import DashboardNav from '@/components/dashboard/dashboard-nav';
 import { useAuth, useUser } from '@/firebase';
 import { useEffect } from 'react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export default function DashboardLayout({
   children,
@@ -39,24 +45,32 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <header className="sticky top-0 z-10 flex h-24 items-center gap-4 border-b bg-card px-4 md:px-6">
-        <div className="flex-1 flex justify-center text-center">
-          <div>
+      <header className="sticky top-0 z-10 flex h-24 items-center justify-between gap-4 border-b bg-card px-4 md:px-6">
+        <div className="w-1/4"></div>
+        <div className="flex-1 text-center">
             <Logo />
             <p className="mt-1 text-lg font-semibold text-muted-foreground">
               Automate student report cards with a single click.
             </p>
-          </div>
+        </div>
+        <div className="w-1/4 flex justify-end">
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="outline" size="icon" className="rounded-full h-12 w-12" onClick={handleSignOut}>
+                            <LogOut className="h-5 w-5" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Sign Out</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
         </div>
       </header>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <DashboardNav />
         <div className="flex-1">{children}</div>
-        <footer className="flex justify-end mt-auto pt-4">
-            <Button variant="outline" onClick={handleSignOut}>
-                <LogOut className="mr-2 h-4 w-4" /> Sign Out
-            </Button>
-        </footer>
       </main>
     </div>
   );
