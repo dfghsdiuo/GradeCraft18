@@ -31,7 +31,7 @@ const ReportCardsInputSchema = z.object({
 });
 export type ReportCardsInput = z.infer<typeof ReportCardsInputSchema>;
 
-const StudentResultSchema = z.object({
+export const StudentResultSchema = z.object({
   studentData: StudentSchema.describe("The original student data object."),
   totalMarks: z.number().describe('The calculated total marks obtained by the student.'),
   percentage: z.number().describe('The calculated overall percentage.'),
@@ -39,6 +39,8 @@ const StudentResultSchema = z.object({
   subjects: z.string().describe("A valid, minified JSON string representing an array of subjects and their marks, like '[{\"name\":\"Math\",\"marks\":85}]'."),
   remarks: z.string().describe("A unique, one-sentence remark based on the student's performance.")
 });
+export type StudentResult = z.infer<typeof StudentResultSchema>;
+
 
 const ReportCardsOutputSchema = z.object({
   results: z.array(StudentResultSchema),

@@ -20,6 +20,7 @@ import {
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useState } from 'react';
+import { ScrollArea } from '../ui/scroll-area';
 
 interface ReportCardDisplayProps {
   htmlContent: string;
@@ -147,8 +148,23 @@ export function ReportCardDisplay({
   return (
     <>
     <Card className="shadow-lg">
-      <CardHeader>
+      <CardHeader className="flex flex-row justify-between items-start">
         <CardTitle>{studentName}</CardTitle>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Eye className="h-5 w-5" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Report Card Preview: {studentName}</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="flex-1">
+              <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
       </CardHeader>
       <CardContent className="p-0">
         <div className="max-h-60 overflow-hidden relative p-6 border-y">
@@ -161,36 +177,19 @@ export function ReportCardDisplay({
         </div>
       </CardContent>
       <CardFooter className="flex justify-end gap-2 p-4">
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="outline">
-              <Eye className="mr-2" />
-              Preview
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
-            <DialogHeader>
-              <DialogTitle>Report Card Preview: {studentName}</DialogTitle>
-            </DialogHeader>
-            <div className="flex-1 overflow-auto">
-              <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Button onClick={handleDownload} disabled={isDownloading}>
+        <Button onClick={handleDownload} disabled={isDownloading} variant="outline" size="sm">
           {isDownloading ? (
-            <Loader2 className="mr-2 animate-spin" />
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
-            <Download className="mr-2" />
+            <Download className="mr-2 h-4 w-4" />
           )}
-          Download PDF
+          PDF
         </Button>
-        <Button onClick={handleShare} variant="secondary" disabled={isSharing}>
+        <Button onClick={handleShare} disabled={isSharing} size="sm">
           {isSharing ? (
-            <Loader2 className="mr-2 animate-spin" />
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
-            <Share2 className="mr-2" />
+            <Share2 className="mr-2 h-4 w-4" />
           )}
           Share
         </Button>

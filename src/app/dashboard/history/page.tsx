@@ -10,11 +10,11 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
-  Download,
   FileText,
   Trash2,
   History as HistoryIcon,
   Loader2,
+  Eye,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -28,14 +28,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import {
-  generateReportCards,
-  ReportCardsOutput,
-} from '@/ai/flows/report-card-flow';
-import { generateReportCardHtml } from '@/components/dashboard/report-card-template';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import { GradeRule } from '@/components/dashboard/grade-rules-form';
+import { BatchDownloader } from '@/components/dashboard/batch-downloader';
 
 interface HistoryItem {
   id: number;
@@ -45,39 +38,10 @@ interface HistoryItem {
   studentsData: any[];
 }
 
-const BATCH_SIZE = 50; // Process 50 students per AI call
-
-async function addPageToPdf(pdf: jsPDF, htmlContent: string) {
-  const reportElement = document.createElement('div');
-  reportElement.innerHTML = htmlContent;
-  reportElement.style.position = 'absolute';
-  reportElement.style.left = '-9999px';
-  reportElement.style.width = '210mm'; // A4 width
-  document.body.appendChild(reportElement);
-
-  const canvas = await html2canvas(reportElement, {
-    scale: 1.5, // Reduced scale to prevent crashes with large files
-    useCORS: true,
-  });
-
-  document.body.removeChild(reportElement);
-
-  const imgData = canvas.toDataURL('image/png');
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = pdf.internal.pageSize.getHeight();
-  const canvasWidth = canvas.width;
-  const canvasHeight = canvas.height;
-  const ratio = canvasWidth / canvasHeight;
-  const height = pdfWidth / ratio;
-
-  pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, Math.min(height, pdfHeight));
-}
-
 export default function HistoryPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
-  const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -125,82 +89,6 @@ export default function HistoryPage() {
     });
   };
 
-  const handleDownload = async (item: HistoryItem) => {
-    if (!item.studentsData || item.studentsData.length === 0) {
-      toast({
-        title: 'No Student Data',
-        description:
-          'This history item does not contain any student data to generate report cards from.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setDownloadingId(item.id);
-    toast({
-      title: 'Generation & Download Started',
-      description: `Preparing report cards for "${item.fileName}". Please wait.`,
-    });
-
-    try {
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
-
-      let gradeRules: GradeRule[] | undefined = undefined;
-      try {
-        const storedRules = localStorage.getItem('gradeRules');
-        if (storedRules) {
-          gradeRules = JSON.parse(storedRules).map(({ id, ...rest }: any) => rest);
-        }
-      } catch (e) {
-        console.error("Could not parse grade rules, using default.", e);
-      }
-
-      let generatedCount = 0;
-
-      for (let i = 0; i < item.studentsData.length; i += BATCH_SIZE) {
-        const batch = item.studentsData.slice(i, i + BATCH_SIZE);
-        const result: ReportCardsOutput = await generateReportCards({
-          studentsData: batch,
-          gradeRules,
-        });
-
-        if (result && result.results) {
-          for (const [index, res] of result.results.entries()) {
-            const reportCardHtml = generateReportCardHtml(res);
-
-            if (index > 0 || i > 0) {
-              pdf.addPage();
-            }
-            await addPageToPdf(pdf, reportCardHtml);
-
-            generatedCount++;
-          }
-        }
-      }
-
-      pdf.save(`${item.fileName.replace('.xlsx', '')}_report_cards.pdf`);
-
-      toast({
-        title: 'Download Complete',
-        description: `Successfully downloaded ${generatedCount} report cards in a single PDF.`,
-      });
-    } catch (error: any) {
-      console.error('Error during batch download:', error);
-      toast({
-        title: 'Download Failed',
-        description:
-          error.message || 'An error occurred during the download process.',
-        variant: 'destructive',
-      });
-    } finally {
-      setDownloadingId(null);
-    }
-  };
-
   if (!isClient) {
     return (
       <div className="flex justify-center items-center h-full">
@@ -218,7 +106,7 @@ export default function HistoryPage() {
               Generation History
             </h1>
             <p className="text-muted-foreground mt-2">
-              Review and download previously generated report card batches.
+              Review, share, and download previously generated report card batches.
             </p>
           </div>
           {history.length > 0 && (
@@ -268,19 +156,16 @@ export default function HistoryPage() {
                     {item.fileCount} report cards
                   </p>
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDownload(item)}
-                      disabled={downloadingId === item.id}
-                    >
-                      {downloadingId === item.id ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Download className="mr-2 h-4 w-4" />
-                      )}
-                      Download
-                    </Button>
+                    <BatchDownloader
+                      studentsData={item.studentsData}
+                      fileName={item.fileName}
+                      triggerButton={
+                        <Button variant="outline" size="sm">
+                          <Eye className="mr-2 h-4 w-4" />
+                          View & Share
+                        </Button>
+                      }
+                    />
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="destructive" size="icon">
