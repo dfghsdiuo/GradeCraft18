@@ -31,6 +31,7 @@ interface ReportCardInfo {
 }
 
 const BATCH_SIZE = 50;
+const PDF_CHUNK_SIZE = 50;
 
 async function addPageToPdf(pdf: jsPDF, htmlContent: string) {
   const reportElement = document.createElement('div');
@@ -41,7 +42,7 @@ async function addPageToPdf(pdf: jsPDF, htmlContent: string) {
   document.body.appendChild(reportElement);
 
   const canvas = await html2canvas(reportElement, {
-    scale: 2,
+    scale: 1.5, // Reduced scale to lower memory usage
     useCORS: true,
   });
 
@@ -267,40 +268,47 @@ export function FileUploader() {
       });
       return;
     }
-
+  
     setIsDownloading(true);
     toast({
-      title: 'Preparing Single PDF...',
-      description: 'All report cards are being combined into one file.',
+      title: 'Preparing PDF Downloads...',
+      description: `All ${reportCards.length} report cards are being combined. This may take a moment.`,
     });
-
+  
     try {
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
-
-      for (const [index, card] of reportCards.entries()) {
-        if (index > 0) {
-          pdf.addPage();
+      const baseFileName = fileName?.replace('.xlsx', '') || 'report_cards';
+  
+      for (let i = 0; i < reportCards.length; i += PDF_CHUNK_SIZE) {
+        const chunk = reportCards.slice(i, i + PDF_CHUNK_SIZE);
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4',
+        });
+  
+        for (const [index, card] of chunk.entries()) {
+          if (index > 0) {
+            pdf.addPage();
+          }
+          await addPageToPdf(pdf, card.reportCardHtml);
         }
-        await addPageToPdf(pdf, card.reportCardHtml);
+  
+        const partNumber = (i / PDF_CHUNK_SIZE) + 1;
+        const totalParts = Math.ceil(reportCards.length / PDF_CHUNK_SIZE);
+        const chunkFileName = totalParts > 1 ? `${baseFileName}_part_${partNumber}.pdf` : `${baseFileName}.pdf`;
+        
+        pdf.save(chunkFileName);
       }
-
-      pdf.save(`${fileName?.replace('.xlsx', '') || 'report_cards'}.pdf`);
-
+  
       toast({
         title: 'Download Complete',
-        description: 'All report cards have been downloaded in a single PDF.',
+        description: `All report cards have been downloaded. ${reportCards.length > PDF_CHUNK_SIZE ? 'They were split into multiple files due to size.' : ''}`,
       });
     } catch (error: any) {
       console.error('Error generating combined PDF:', error);
       toast({
         title: 'Download Failed',
-        description:
-          error.message ||
-          'An error occurred while creating the combined PDF.',
+        description: error.message || 'An error occurred while creating the combined PDF.',
         variant: 'destructive',
       });
     } finally {
