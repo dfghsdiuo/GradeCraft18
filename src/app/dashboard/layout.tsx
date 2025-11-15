@@ -39,11 +39,11 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <header className="sticky top-0 z-10 flex h-20 items-center gap-4 border-b bg-card px-4 md:px-6">
+      <header className="sticky top-0 z-10 flex h-24 items-center gap-4 border-b bg-card px-4 md:px-6">
         <div className="flex-1 flex justify-center text-center">
           <div>
             <Logo />
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-lg font-semibold text-muted-foreground">
               Automate student report cards with a single click.
             </p>
           </div>
