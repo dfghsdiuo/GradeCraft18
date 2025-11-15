@@ -1,5 +1,7 @@
 'use client';
 
+import { PlaceHolderImages } from "@/lib/placeholder-images";
+
 type Subject = {
     name: string;
     marks: number;
@@ -14,6 +16,8 @@ type StudentResult = {
     remarks: string;
 };
 
+const schoolLogoPlaceholder = PlaceHolderImages.find(p => p.id === 'school_logo');
+
 export const generateReportCardHtml = (result: StudentResult): string => {
     const { studentData, totalMarks, percentage, grade, subjects, remarks } = result;
 
@@ -24,7 +28,7 @@ export const generateReportCardHtml = (result: StudentResult): string => {
 
     let schoolName = "Springfield High";
     let session = "2024-2025";
-    let schoolLogoUrl = "/school-logo-placeholder.png"; 
+    let schoolLogoUrl = schoolLogoPlaceholder?.imageUrl || ""; 
     let teacherSignatureUrl = "";
     let principalSignatureUrl = "";
 
