@@ -12,6 +12,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Check, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import React from 'react';
+import { GradeRulesForm } from './grade-rules-form';
 
 const themeColors = [
   { name: 'Blue', value: 'blue', className: 'bg-blue-500' },
@@ -120,14 +121,16 @@ export function SettingsForm() {
 
   useEffect(() => {
     setThemeColor(localStorage.getItem('themeColor') || 'blue');
-    setSchoolName(localStorage.getItem('schoolName') || '');
-    setSessionYear(localStorage.getItem('sessionYear') || '');
+    setSchoolName(localStorage.getItem('schoolName') || 'Springfield High');
+    setSessionYear(localStorage.getItem('sessionYear') || '2024-2025');
   }, []);
 
   const handleSave = () => {
     localStorage.setItem('schoolName', schoolName);
     localStorage.setItem('sessionYear', sessionYear);
     localStorage.setItem('themeColor', themeColor);
+    // The GradeRulesForm handles its own saving, but we can trigger a toast here
+    // for overall settings saved.
     toast({
       title: 'Settings Saved',
       description: 'Your changes have been saved successfully.',
@@ -135,87 +138,92 @@ export function SettingsForm() {
   };
 
   return (
-    <Card className="w-full shadow-lg">
-      <CardContent className="grid gap-8 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="space-y-8">
+      <Card className="w-full shadow-lg">
+        <CardContent className="grid gap-8 p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="school-name">School Name</Label>
+              <Input
+                id="school-name"
+                placeholder="e.g., Springfield High"
+                value={schoolName}
+                onChange={(e) => setSchoolName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="session-year">Session Year</Label>
+              <Input
+                id="session-year"
+                placeholder="e.g., 2024-2025"
+                value={sessionYear}
+                onChange={(e) => setSessionYear(e.target.value)}
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="school-name">School Name</Label>
-            <Input
-              id="school-name"
-              placeholder="e.g., Springfield High"
-              value={schoolName}
-              onChange={(e) => setSchoolName(e.target.value)}
+            <Label>Theme Color</Label>
+            <RadioGroup
+              value={themeColor}
+              onValueChange={setThemeColor}
+              className="flex items-center gap-4"
+            >
+              {themeColors.map((color) => (
+                <React.Fragment key={color.value}>
+                  <RadioGroupItem
+                    value={color.value}
+                    id={`color-${color.value}`}
+                    className="sr-only"
+                  />
+                  <Label
+                    htmlFor={`color-${color.value}`}
+                    className={cn(
+                      'flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-2 transition-transform duration-200',
+                      color.className,
+                      themeColor === color.value
+                        ? 'border-foreground scale-110'
+                        : 'border-transparent'
+                    )}
+                    aria-label={color.name}
+                  >
+                    {themeColor === color.value && (
+                      <Check className="h-6 w-6 text-white" />
+                    )}
+                  </Label>
+                </React.Fragment>
+              ))}
+            </RadioGroup>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <ImageUploader
+              label="School Logo"
+              description="PNG with transparent background recommended."
+              storageKey="schoolLogo"
+            />
+            <ImageUploader
+              label="Class Teacher's Signature"
+              description="Upload a clear signature."
+              storageKey="Class Teacher's Signature"
+            />
+            <ImageUploader
+              label="Principal's Signature"
+              description="Upload a clear signature."
+              storageKey="Principal's Signature"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="session-year">Session Year</Label>
-            <Input
-              id="session-year"
-              placeholder="e.g., 2024-2025"
-              value={sessionYear}
-              onChange={(e) => setSessionYear(e.target.value)}
-            />
-          </div>
-        </div>
+        </CardContent>
+        <CardFooter className="flex justify-end bg-card p-4 border-t">
+          <Button onClick={handleSave}>
+            <Save className="mr-2 h-4 w-4" />
+            Save General Settings
+          </Button>
+        </CardFooter>
+      </Card>
+      
+      <GradeRulesForm />
 
-        <div className="space-y-2">
-          <Label>Theme Color</Label>
-          <RadioGroup
-            value={themeColor}
-            onValueChange={setThemeColor}
-            className="flex items-center gap-4"
-          >
-            {themeColors.map((color) => (
-              <React.Fragment key={color.value}>
-                <RadioGroupItem
-                  value={color.value}
-                  id={`color-${color.value}`}
-                  className="sr-only"
-                />
-                <Label
-                  htmlFor={`color-${color.value}`}
-                  className={cn(
-                    'flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-2 transition-transform duration-200',
-                    color.className,
-                    themeColor === color.value
-                      ? 'border-foreground scale-110'
-                      : 'border-transparent'
-                  )}
-                  aria-label={color.name}
-                >
-                  {themeColor === color.value && (
-                    <Check className="h-6 w-6 text-white" />
-                  )}
-                </Label>
-              </React.Fragment>
-            ))}
-          </RadioGroup>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <ImageUploader
-            label="School Logo"
-            description="PNG with transparent background recommended."
-            storageKey="schoolLogo"
-          />
-          <ImageUploader
-            label="Class Teacher's Signature"
-            description="Upload a clear signature."
-            storageKey="Class Teacher's Signature"
-          />
-          <ImageUploader
-            label="Principal's Signature"
-            description="Upload a clear signature."
-            storageKey="Principal's Signature"
-          />
-        </div>
-      </CardContent>
-      <CardFooter className="flex justify-end bg-card p-4 border-t">
-        <Button onClick={handleSave}>
-          <Save className="mr-2 h-4 w-4" />
-          Save Settings
-        </Button>
-      </CardFooter>
-    </Card>
+    </div>
   );
 }

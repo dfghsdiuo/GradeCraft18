@@ -14,6 +14,8 @@ import { Progress } from '@/components/ui/progress';
 import { generateReportCardHtml } from './report-card-template';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { GradeRule } from './grade-rules-form';
+
 
 interface HistoryItem {
   id: number;
@@ -206,6 +208,16 @@ export function FileUploader() {
         setIsGenerating(false);
         return;
       }
+
+      let gradeRules: GradeRule[] | undefined = undefined;
+      try {
+        const storedRules = localStorage.getItem('gradeRules');
+        if (storedRules) {
+          gradeRules = JSON.parse(storedRules).map(({ id, ...rest }: any) => rest);
+        }
+      } catch (e) {
+        console.error("Could not parse grade rules, using default.", e);
+      }
       
       const allResults: ReportCardInfo[] = [];
       let successfulGenerations = 0;
@@ -213,7 +225,7 @@ export function FileUploader() {
       for (let i = 0; i < plainStudentsData.length; i += BATCH_SIZE) {
         const batch = plainStudentsData.slice(i, i + BATCH_SIZE);
         try {
-            const result: ReportCardsOutput = await generateReportCards({ studentsData: batch });
+            const result: ReportCardsOutput = await generateReportCards({ studentsData: batch, gradeRules });
 
             if (result && result.results) {
               const batchResults = result.results.map(res => {

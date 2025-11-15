@@ -8,8 +8,8 @@ export default function SettingsPage() {
           Report Card Settings
         </h1>
         <p className="text-muted-foreground mt-2">
-          Customize the details that appear on the generated report cards. Your
-          settings are saved automatically.
+          Customize the details and grading rules that appear on the generated
+          report cards.
         </p>
       </div>
       <SettingsForm />

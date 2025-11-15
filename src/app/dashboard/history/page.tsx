@@ -35,6 +35,7 @@ import {
 import { generateReportCardHtml } from '@/components/dashboard/report-card-template';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { GradeRule } from '@/components/dashboard/grade-rules-form';
 
 interface HistoryItem {
   id: number;
@@ -148,12 +149,23 @@ export default function HistoryPage() {
         format: 'a4',
       });
 
+      let gradeRules: GradeRule[] | undefined = undefined;
+      try {
+        const storedRules = localStorage.getItem('gradeRules');
+        if (storedRules) {
+          gradeRules = JSON.parse(storedRules).map(({ id, ...rest }: any) => rest);
+        }
+      } catch (e) {
+        console.error("Could not parse grade rules, using default.", e);
+      }
+
       let generatedCount = 0;
 
       for (let i = 0; i < item.studentsData.length; i += BATCH_SIZE) {
         const batch = item.studentsData.slice(i, i + BATCH_SIZE);
         const result: ReportCardsOutput = await generateReportCards({
           studentsData: batch,
+          gradeRules,
         });
 
         if (result && result.results) {
