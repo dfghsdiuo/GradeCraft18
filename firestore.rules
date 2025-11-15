@@ -1,0 +1,119 @@
+/**
+ * @fileoverview Firestore Security Rules for Report Card Generator Pro.
+ *
+ * Core Philosophy:
+ * This ruleset prioritizes shared data access for all users, allowing all users to access the same data without restrictions. Write access is restricted to prevent unauthorized data modification.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores user profile information, secured via path-based ownership.
+ * - /student_data/{studentDataId}: Stores student data, accessible to all users.
+ * - /report_card_settings/{reportCardSettingsId}: Stores report card settings, accessible to all users.
+ * - /report_card_history/{reportCardHistoryId}: Stores the history of generated report cards, accessible to all users.
+ *
+ * Key Security Decisions:
+ * - All users have read access to the `student_data`, `report_card_settings`, and `report_card_history` collections.
+ * - Only authenticated users can read and write to their own user document in `/users/{userId}`.
+ * - Write access to the `student_data`, `report_card_settings`, and `report_card_history` collections is explicitly denied.
+ * - Data shape validation is relaxed to facilitate rapid prototyping but ownership is enforced.
+ *
+ * Denormalization for Authorization:
+ * - The design avoids relying on hierarchical authorization or `get()` calls within rules. Instead, all authorization decisions are made based on direct document properties or the request context.
+ *
+ * Structural Segregation:
+ * - All documents are placed in root-level collections instead of user subcollections to ensure universal access.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Allows authenticated users to read and write their own user document.
+     * @path /users/{userId}
+     * @allow (create) - User with UID 'user_abc' can create a document at /users/user_abc.
+     * @deny (create) - User with UID 'user_xyz' cannot create a document at /users/user_abc.
+     * @allow (get) - User with UID 'user_abc' can read their document at /users/user_abc.
+     * @deny (get) - User with UID 'user_xyz' cannot read document /users/user_abc.
+     * @allow (update) - User with UID 'user_abc' can update their document at /users/user_abc.
+     * @deny (update) - User with UID 'user_xyz' cannot update document /users/user_abc.
+     * @allow (delete) - User with UID 'user_abc' can delete their document at /users/user_abc.
+     * @deny (delete) - User with UID 'user_xyz' cannot delete document /users/user_abc.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     */
+    match /users/{userId} {
+      // Helper function to check if the user is signed in
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      // Helper function to check if the user is the owner of the document
+      function isOwner(userId) {
+        return isSignedIn() && request.auth.uid == userId;
+      }
+
+      // Helper function to check if the user is the existing owner of the document
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Allows all users to read student data. Write operations are not allowed.
+     * @path /student_data/{studentDataId}
+     * @allow (get) - Any user can read any student data document.
+     * @allow (list) - Any user can list student data documents.
+     * @deny (create) - No one can create student data documents.
+     * @deny (update) - No one can update student data documents.
+     * @deny (delete) - No one can delete student data documents.
+     * @principle Provides public read access while restricting write access.
+     */
+    match /student_data/{studentDataId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Allows all users to read report card settings. Write operations are not allowed.
+     * @path /report_card_settings/{reportCardSettingsId}
+     * @allow (get) - Any user can read any report card settings document.
+     * @allow (list) - Any user can list report card settings documents.
+     * @deny (create) - No one can create report card settings documents.
+     * @deny (update) - No one can update report card settings documents.
+     * @deny (delete) - No one can delete report card settings documents.
+     * @principle Provides public read access while restricting write access.
+     */
+    match /report_card_settings/{reportCardSettingsId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Allows all users to read report card history. Write operations are not allowed.
+     * @path /report_card_history/{reportCardHistoryId}
+     * @allow (get) - Any user can read any report card history document.
+     * @allow (list) - Any user can list report card history documents.
+     * @deny (create) - No one can create report card history documents.
+     * @deny (update) - No one can update report card history documents.
+     * @deny (delete) - No one can delete report card history documents.
+     * @principle Provides public read access while restricting write access.
+     */
+    match /report_card_history/{reportCardHistoryId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}
