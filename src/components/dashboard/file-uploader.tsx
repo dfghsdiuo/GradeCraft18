@@ -12,6 +12,13 @@ import {
 import { ReportCardDisplay } from './report-card-display';
 import { Progress } from '@/components/ui/progress';
 
+interface HistoryItem {
+  id: number;
+  fileName: string;
+  date: string;
+  fileCount: number;
+}
+
 export function FileUploader() {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -76,6 +83,29 @@ export function FileUploader() {
     }
   };
 
+  const saveToHistory = (
+    fileName: string,
+    fileCount: number
+  ) => {
+    try {
+      const storedHistory = localStorage.getItem('reportCardHistory');
+      const history: HistoryItem[] = storedHistory ? JSON.parse(storedHistory) : [];
+      
+      const newHistoryItem: HistoryItem = {
+        id: Date.now(),
+        fileName: `${fileName.split('.')[0]}.zip`,
+        date: new Date().toISOString().split('T')[0],
+        fileCount: fileCount,
+      };
+
+      const updatedHistory = [newHistoryItem, ...history];
+      localStorage.setItem('reportCardHistory', JSON.stringify(updatedHistory));
+    } catch (error) {
+      console.error("Failed to save to history", error);
+    }
+  };
+
+
   const handleGenerate = async () => {
     if (!file) {
       toast({
@@ -129,6 +159,10 @@ export function FileUploader() {
       }
       
       setReportCards(generated);
+
+      if (generated.length > 0) {
+        saveToHistory(file.name, generated.length);
+      }
 
       toast({
         title: 'Generation Complete',

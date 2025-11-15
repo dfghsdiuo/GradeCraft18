@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -39,9 +39,49 @@ const MOCK_HISTORY_DATA = [
   },
 ];
 
+interface HistoryItem {
+  id: number;
+  fileName: string;
+  date: string;
+  fileCount: number;
+}
+
+
 export default function HistoryPage() {
-  const [history, setHistory] = useState(MOCK_HISTORY_DATA);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const { toast } = useToast();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (isClient) {
+      try {
+        const storedHistory = localStorage.getItem('reportCardHistory');
+        if (storedHistory) {
+          setHistory(JSON.parse(storedHistory));
+        } else {
+          // If no history in local storage, set the mock data
+          setHistory(MOCK_HISTORY_DATA);
+        }
+      } catch (error) {
+        console.error("Failed to parse history from localStorage", error);
+        setHistory(MOCK_HISTORY_DATA);
+      }
+    }
+  }, [isClient]);
+
+  useEffect(() => {
+    if(isClient) {
+      try {
+        localStorage.setItem('reportCardHistory', JSON.stringify(history));
+      } catch (error) {
+        console.error("Failed to save history to localStorage", error);
+      }
+    }
+  }, [history, isClient]);
 
   const handleDelete = (id: number) => {
     setHistory(history.filter((item) => item.id !== id));
@@ -52,10 +92,8 @@ export default function HistoryPage() {
   };
 
   const handleDownload = (fileName: string) => {
-    // This is a dummy download function.
-    // In a real app, you would fetch the file from a server.
     const blob = new Blob([`Dummy content for ${fileName}`], {
-      type: 'text/plain',
+      type: 'application/zip',
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -82,7 +120,6 @@ export default function HistoryPage() {
         await navigator.share(shareData);
         toast({ title: 'Shared successfully!' });
       } else {
-        // Fallback for browsers that don't support the Web Share API
         navigator.clipboard.writeText(shareData.url);
         toast({
           title: 'Link Copied',
@@ -98,6 +135,10 @@ export default function HistoryPage() {
       });
     }
   };
+  
+  if (!isClient) {
+    return null; // or a loading spinner
+  }
 
   return (
     <div>
