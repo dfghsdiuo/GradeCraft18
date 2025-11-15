@@ -20,8 +20,13 @@ service cloud.firestore {
     }
 
     match /report_card_history/{historyId} {
-      allow read, create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // Users can query the collection, but only for their own documents.
+      // The client-side query MUST include `where('userId', '==', request.auth.uid)`.
+      allow list: if isSignedIn();
+      
+      // Users can read, create, update, or delete a document if they are the owner.
+      allow read, update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
   }
 }
