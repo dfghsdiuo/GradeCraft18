@@ -32,6 +32,7 @@ export function ReportCardDisplay({
 }: ReportCardDisplayProps) {
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
   const getCanvas = async () => {
     const reportElement = document.createElement('div');
@@ -70,14 +71,6 @@ export function ReportCardDisplay({
     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, Math.min(height, pdfHeight));
     return pdf;
   };
-  
-  const generatePngBlob = (): Promise<Blob | null> => {
-    return new Promise(async (resolve) => {
-      const canvas = await getCanvas();
-      canvas.toBlob(resolve, 'image/png');
-    });
-  };
-
 
   const handleDownload = async () => {
     setIsDownloading(true);
@@ -105,21 +98,19 @@ export function ReportCardDisplay({
   };
 
   const handleShare = async () => {
+    setIsSharing(true);
     toast({
-      title: 'Preparing PNG for sharing...',
+      title: 'Preparing PDF for sharing...',
       description: 'Please wait a moment.',
     });
     try {
-      const pngBlob = await generatePngBlob();
+      const pdf = await generatePdf();
+      const pdfBlob = pdf.output('blob');
       
-      if (!pngBlob) {
-        throw new Error('Failed to create PNG blob for sharing.');
-      }
-
       const file = new File(
-        [pngBlob],
-        `${studentName.replace(/\s+/g, '_')}_report_card.png`,
-        { type: 'image/png' }
+        [pdfBlob],
+        `${studentName.replace(/\s+/g, '_')}_report_card.pdf`,
+        { type: 'application/pdf' }
       );
 
       const shareData = {
@@ -132,12 +123,10 @@ export function ReportCardDisplay({
         await navigator.share(shareData);
         toast({ title: 'Shared successfully!' });
       } else {
-        // Fallback for browsers that don't support file sharing
-        const url = URL.createObjectURL(pngBlob);
-        navigator.clipboard.writeText(url);
         toast({
-          title: 'Link Copied!',
-          description: "A shareable link to the report card image has been copied to your clipboard.",
+          title: 'Sharing Not Supported',
+          description: "Your browser doesn't support direct file sharing. Please download the PDF to share it.",
+          variant: 'destructive',
         });
       }
     } catch (error: any) {
@@ -150,6 +139,8 @@ export function ReportCardDisplay({
             variant: 'destructive',
         });
       }
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -195,8 +186,12 @@ export function ReportCardDisplay({
           )}
           Download PDF
         </Button>
-        <Button onClick={handleShare} variant="secondary">
-          <Share2 className="mr-2" />
+        <Button onClick={handleShare} variant="secondary" disabled={isSharing}>
+          {isSharing ? (
+            <Loader2 className="mr-2 animate-spin" />
+          ) : (
+            <Share2 className="mr-2" />
+          )}
           Share
         </Button>
       </CardFooter>
