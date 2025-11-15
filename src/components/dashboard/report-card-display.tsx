@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Share2, Eye, Loader2 } from 'lucide-react';
+import { Download, Share2, Eye, Loader2, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -20,27 +20,6 @@ import {
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useState } from 'react';
-
-// Custom WhatsApp Icon
-function WhatsAppIcon(props: React.SVGProps<SVGElement>) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-    </svg>
-  );
-}
-
 
 interface ReportCardDisplayProps {
   htmlContent: string;
@@ -171,27 +150,26 @@ export function ReportCardDisplay({
     }
   };
 
-  const handleWhatsAppShare = async () => {
+  const handleEmailShare = async () => {
     toast({
-      title: 'Preparing PDF for WhatsApp...',
+      title: 'Preparing Email...',
       description: 'Please wait a moment.',
     });
     try {
-      const pdf = await generatePdf();
-      const pdfBlob = pdf.output('blob');
-      const url = URL.createObjectURL(pdfBlob);
-      const text = `Hello, please find the report card for ${studentName} here: ${url}`;
-      const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-      window.open(whatsappUrl, '_blank');
-      toast({
-        title: 'WhatsApp Opened',
-        description: 'A new tab to share on WhatsApp has been opened.',
-      });
+      const subject = `Report Card for ${studentName}`;
+      const body = `Hello,\n\nPlease find the report card for ${studentName} attached.`;
+      
+      // Note: Attaching files via mailto is not reliably supported. 
+      // This will open the default mail client with subject and body.
+      // The user would need to manually attach the downloaded PDF.
+      const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = mailtoLink;
+
     } catch (error) {
-      console.error('Error sharing to WhatsApp:', error);
+      console.error('Error sharing to Email:', error);
       toast({
-        title: 'Sharing Failed',
-        description: 'Could not prepare the PDF for sharing.',
+        title: 'Email Failed',
+        description: 'Could not open the email client.',
         variant: 'destructive',
       });
     }
@@ -240,15 +218,14 @@ export function ReportCardDisplay({
         </Button>
         <Button onClick={handleShare} variant="secondary">
           <Share2 className="mr-2" />
-          Share
+          Share PNG
         </Button>
         <Button
-          onClick={handleWhatsAppShare}
+          onClick={handleEmailShare}
           variant="secondary"
-          className="bg-green-500 hover:bg-green-600 text-white"
         >
-          <WhatsAppIcon className="mr-2" />
-          WhatsApp
+          <Mail className="mr-2" />
+          Email
         </Button>
       </CardFooter>
     </Card>

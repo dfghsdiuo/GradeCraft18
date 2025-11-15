@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import {
   Download,
-  Share2,
+  Mail,
   FileText,
   Trash2,
   History as HistoryIcon,
@@ -28,26 +28,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-
-// Custom WhatsApp Icon
-function WhatsAppIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-    </svg>
-  );
-}
 
 interface HistoryItem {
   id: number;
@@ -117,25 +97,10 @@ export default function HistoryPage() {
   };
 
   const handleShare = (fileName: string) => {
-    const text = `Hello, sharing the generated report cards for ${fileName}.`;
-    if(navigator.share) {
-        navigator.share({
-            title: 'Report Cards',
-            text: text,
-        }).then(() => {
-            toast({
-              title: 'Shared successfully!',
-            });
-        }).catch(error => {
-            console.error('Sharing failed', error)
-             // Fallback to whatsapp
-            const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-            window.open(whatsappUrl, '_blank');
-        })
-    } else {
-        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-        window.open(whatsappUrl, '_blank');
-    }
+    const subject = `Report Cards Generated: ${fileName}`;
+    const body = `Hello,\n\nThe report cards for ${fileName} have been generated.\n\nTo view and download them, please re-upload the source file in the Report Card Generator application.`;
+    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoLink;
   };
   
   if (!isClient) {
@@ -210,10 +175,9 @@ export default function HistoryPage() {
                     variant="secondary"
                     size="sm"
                     onClick={() => handleShare(item.fileName)}
-                    className="bg-green-500 hover:bg-green-600 text-white"
                   >
-                    <WhatsAppIcon className="mr-2 h-4 w-4" />
-                    Share
+                    <Mail className="mr-2 h-4 w-4" />
+                    Email
                   </Button>
                   <Button
                     variant="destructive"
