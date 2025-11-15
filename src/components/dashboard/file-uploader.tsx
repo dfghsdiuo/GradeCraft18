@@ -25,7 +25,7 @@ interface ReportCardInfo {
   studentName: string;
 }
 
-const BATCH_SIZE = 5;
+const BATCH_SIZE = 10;
 
 export function FileUploader() {
   const [file, setFile] = useState<File | null>(null);
