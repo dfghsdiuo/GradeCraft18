@@ -6,17 +6,15 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { UploadCloud, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import React from 'react';
 
 const themeColors = [
   { name: 'Blue', value: 'blue', className: 'bg-blue-500' },
@@ -144,27 +142,28 @@ export function SettingsForm() {
             className="flex items-center gap-4"
           >
             {themeColors.map((color) => (
-              <RadioGroupItem
-                key={color.value}
-                value={color.value}
-                id={`color-${color.value}`}
-                className="sr-only"
-              />
-              <Label
-                htmlFor={`color-${color.value}`}
-                className={cn(
-                  'flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-2 transition-transform duration-200',
-                  color.className,
-                  themeColor === color.value
-                    ? 'border-foreground scale-110'
-                    : 'border-transparent'
-                )}
-                aria-label={color.name}
-              >
-                {themeColor === color.value && (
-                  <Check className="h-6 w-6 text-white" />
-                )}
-              </Label>
+              <React.Fragment key={color.value}>
+                <RadioGroupItem
+                  value={color.value}
+                  id={`color-${color.value}`}
+                  className="sr-only"
+                />
+                <Label
+                  htmlFor={`color-${color.value}`}
+                  className={cn(
+                    'flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-2 transition-transform duration-200',
+                    color.className,
+                    themeColor === color.value
+                      ? 'border-foreground scale-110'
+                      : 'border-transparent'
+                  )}
+                  aria-label={color.name}
+                >
+                  {themeColor === color.value && (
+                    <Check className="h-6 w-6 text-white" />
+                  )}
+                </Label>
+              </React.Fragment>
             ))}
           </RadioGroup>
         </div>
