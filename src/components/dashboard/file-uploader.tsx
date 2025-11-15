@@ -25,6 +25,8 @@ interface ReportCardInfo {
   studentName: string;
 }
 
+const BATCH_SIZE = 5;
+
 export function FileUploader() {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -138,9 +140,7 @@ export function FileUploader() {
       const worksheet = workbook.Sheets[sheetName];
       const studentsData = XLSX.utils.sheet_to_json(worksheet);
       
-      // Convert to plain JS objects to avoid serialization issues
       const plainStudentsData = JSON.parse(JSON.stringify(studentsData));
-
 
       if (plainStudentsData.length === 0) {
         toast({
@@ -155,22 +155,24 @@ export function FileUploader() {
       const allResults: ReportCardInfo[] = [];
       let successfulGenerations = 0;
 
-      for (let i = 0; i < plainStudentsData.length; i++) {
-        const studentData = plainStudentsData[i];
+      for (let i = 0; i < plainStudentsData.length; i += BATCH_SIZE) {
+        const batch = plainStudentsData.slice(i, i + BATCH_SIZE);
         try {
-            const result: ReportCardsOutput = await generateReportCards({ studentsData: [studentData] });
+            const result: ReportCardsOutput = await generateReportCards({ studentsData: batch });
 
-            if (result && result.results && result.results.length > 0) {
-              const res = result.results[0];
-              const studentName = res.studentData.Name || 'Unknown Student';
-              const reportCardHtml = generateReportCardHtml(res);
-              allResults.push({ studentName, reportCardHtml });
-              successfulGenerations++;
+            if (result && result.results) {
+              const batchResults = result.results.map(res => {
+                  const studentName = res.studentData.Name || 'Unknown Student';
+                  const reportCardHtml = generateReportCardHtml(res);
+                  return { studentName, reportCardHtml };
+              });
+              allResults.push(...batchResults);
+              successfulGenerations += batchResults.length;
             }
         } catch (error) {
-            console.error(`Error generating report card for student:`, studentData, error);
+            console.error(`Error generating report card for batch starting at index ${i}:`, error);
         }
-        setGenerationProgress(((i + 1) / plainStudentsData.length) * 100);
+        setGenerationProgress(((i + batch.length) / plainStudentsData.length) * 100);
       }
       
       setReportCards(allResults);
@@ -195,7 +197,6 @@ export function FileUploader() {
       });
     } finally {
       setIsGenerating(false);
-      // Ensure progress is 100 at the end, even on failure, to hide the bar.
       setTimeout(() => setGenerationProgress(0), 2000);
     }
   };
