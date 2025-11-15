@@ -17,7 +17,6 @@ import {
   Eye,
   Share2,
   Download,
-  Mail,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -38,7 +37,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { EmailDialog } from '@/components/dashboard/email-dialog';
 
 interface HistoryItem {
   id: number;
@@ -191,16 +189,6 @@ export default function HistoryPage() {
                           <Download className="mr-2 h-4 w-4" />
                           <span>Download All as PDF</span>
                         </DropdownMenuItem>
-                        <EmailDialog
-                          trigger={
-                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                <Mail className="mr-2 h-4 w-4" />
-                                <span>Email Notification</span>
-                            </DropdownMenuItem>
-                          }
-                          fileName={item.fileName}
-                          fileCount={item.fileCount}
-                        />
                       </DropdownMenuContent>
                     </DropdownMenu>
 
