@@ -25,7 +25,7 @@ import { GradeRule } from './grade-rules-form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface BatchDownloaderProps {
-  studentsData: any[];
+  studentsData?: any[];
   fileName: string;
   triggerButton?: React.ReactNode;
 }
@@ -60,7 +60,7 @@ async function addPageToPdf(pdf: jsPDF, htmlContent: string) {
 }
 
 export function BatchDownloader({
-  studentsData,
+  studentsData = [],
   fileName,
   triggerButton,
 }: BatchDownloaderProps) {
