@@ -54,7 +54,7 @@ async function addPageToPdf(pdf: jsPDF, htmlContent: string) {
   document.body.appendChild(reportElement);
 
   const canvas = await html2canvas(reportElement, {
-    scale: 2,
+    scale: 1.5, // Reduced scale to lower memory usage
     useCORS: true,
   });
 
