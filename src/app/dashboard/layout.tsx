@@ -51,7 +51,7 @@ export default function DashboardLayout({
         </div>
         <div className="flex flex-1 flex-col items-center text-center">
             <Logo />
-            <p className="mt-1 text-lg font-semibold text-muted-foreground">
+            <p className="mt-1 text-xl font-bold text-muted-foreground">
               Automate student report cards with a single click.
             </p>
         </div>
