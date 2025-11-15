@@ -14,8 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 import {
   generateReportCards,
   ReportCardsOutput,
-  StudentResult,
 } from '@/ai/flows/report-card-flow';
+import type { StudentResult } from '@/ai/flows/types';
 import { ReportCardDisplay } from './report-card-display';
 import { Progress } from '@/components/ui/progress';
 import { generateReportCardHtml } from './report-card-template';

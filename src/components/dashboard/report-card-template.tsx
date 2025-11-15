@@ -1,19 +1,11 @@
 'use client';
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import type { StudentResult } from "@/ai/flows/types";
 
 export type Subject = {
     name: string;
     marks: number;
-};
-
-type StudentResult = {
-    studentData: Record<string, any>;
-    totalMarks: number;
-    percentage: number;
-    grade: string;
-    subjects: string; // Is a JSON string
-    remarks: string;
 };
 
 const schoolLogoPlaceholder = PlaceHolderImages.find(p => p.id === 'school_logo');
