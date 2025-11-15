@@ -26,6 +26,7 @@ interface ReportCardInfo {
 
 const BATCH_SIZE = 50; // Process 50 students per AI call
 const PDF_CHUNK_SIZE = 50; // Download 50 PDFs per file
+const MAX_RETRIES = 2;
 
 async function addPageToPdf(pdf: jsPDF, htmlContent: string) {
   const reportElement = document.createElement('div');
@@ -196,46 +197,69 @@ export function FileUploader() {
 
       // Fetch user settings for grade rules
       let gradeRules: GradeRule[] | undefined = undefined;
+      let settingsData: UserSettings | undefined = undefined;
       const settingsDoc = await import('firebase/firestore').then(m => m.getDoc(m.doc(firestore, 'user_settings', user.uid)));
       if (settingsDoc.exists()) {
-          const settings = settingsDoc.data() as UserSettings;
-          gradeRules = settings.gradeRules;
+          settingsData = settingsDoc.data() as UserSettings;
+          gradeRules = settingsData.gradeRules;
       }
       
       const allResults: ReportCardInfo[] = [];
-      let successfulGenerations = 0;
+      const failedBatches: any[][] = [];
 
       for (let i = 0; i < plainStudentsData.length; i += BATCH_SIZE) {
         const batch = plainStudentsData.slice(i, i + BATCH_SIZE);
-        try {
-            const result: ReportCardsOutput = await generateReportCards({ studentsData: batch, gradeRules });
-
-            if (result && result.results) {
-              const batchResults = result.results.map(res => {
-                  const studentName = res.studentData.Name || 'Unknown Student';
-                  const reportCardHtml = generateReportCardHtml(res, settingsDoc.exists() ? settingsDoc.data() as UserSettings : undefined);
-                  return { studentName, reportCardHtml };
-              });
-              allResults.push(...batchResults);
-              successfulGenerations += batchResults.length;
+        let success = false;
+        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                const result: ReportCardsOutput = await generateReportCards({ studentsData: batch, gradeRules });
+    
+                if (result && result.results) {
+                  const batchResults = result.results.map(res => {
+                      const studentName = res.studentData.Name || 'Unknown Student';
+                      const reportCardHtml = generateReportCardHtml(res, settingsData);
+                      return { studentName, reportCardHtml };
+                  });
+                  allResults.push(...batchResults);
+                  success = true;
+                  break; // Exit retry loop on success
+                }
+            } catch (error) {
+                if (attempt === MAX_RETRIES) {
+                    console.error(`Error generating report card for batch starting at index ${i} after ${MAX_RETRIES} retries:`, error);
+                } else {
+                    console.warn(`Attempt ${attempt + 1} failed for batch starting at ${i}. Retrying...`);
+                }
             }
-        } catch (error) {
-            console.error(`Error generating report card for batch starting at index ${i}:`, error);
         }
+        if (!success) {
+            failedBatches.push(batch);
+        }
+
         setGenerationProgress(((i + batch.length) / plainStudentsData.length) * 100);
       }
       
       setReportCards(allResults);
+      const successfulGenerations = allResults.length;
 
       if (successfulGenerations > 0) {
-        saveToHistory(file.name, successfulGenerations, plainStudentsData);
+        saveToHistory(file.name, successfulGenerations, plainStudentsData.filter(student => allResults.some(res => res.studentName === student.Name)));
       }
 
-      toast({
-        title: 'Generation Complete',
-        description: `${successfulGenerations} of ${plainStudentsData.length} report cards have been successfully generated.`,
-      });
-
+      if (failedBatches.length > 0) {
+        const failedStudentNames = failedBatches.flat().map(s => s.Name || 'Unknown');
+        toast({
+            title: 'Partial Generation Failure',
+            description: `Successfully generated ${successfulGenerations} report cards. Failed to generate for: ${failedStudentNames.join(', ')}. Please try again.`,
+            variant: 'destructive',
+            duration: 10000,
+        });
+      } else {
+        toast({
+            title: 'Generation Complete',
+            description: `${successfulGenerations} of ${plainStudentsData.length} report cards have been successfully generated.`,
+        });
+      }
 
     } catch (error: any) {
       console.error('Error generating report cards:', error);
@@ -419,3 +443,5 @@ export function FileUploader() {
     </div>
   );
 }
+
+    

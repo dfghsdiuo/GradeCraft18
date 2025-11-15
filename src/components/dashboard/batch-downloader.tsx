@@ -36,6 +36,7 @@ interface BatchDownloaderProps {
 
 const BATCH_SIZE = 50; // Process 50 students per AI call
 const PDF_CHUNK_SIZE = 50; // Download 50 PDFs per file
+const MAX_RETRIES = 2; // Number of retries for a failed batch
 
 async function addPageToPdf(pdf: jsPDF, htmlContent: string) {
   const reportElement = document.createElement('div');
@@ -127,23 +128,35 @@ export function BatchDownloader({
       const gradeRules = currentSettings?.gradeRules;
 
       const allResults: StudentResult[] = [];
-      let successfulGenerations = 0;
+      const failedBatches: any[][] = [];
 
       for (let i = 0; i < plainStudentsData.length; i += BATCH_SIZE) {
         const batch = plainStudentsData.slice(i, i + BATCH_SIZE);
-        try {
-          const result: ReportCardsOutput = await generateReportCards({
-            studentsData: batch,
-            gradeRules,
-          });
-
-          if (result && result.results) {
-            allResults.push(...result.results);
-            successfulGenerations += result.results.length;
-          }
-        } catch (error) {
-          // Error is now thrown from the flow, toast is handled globally by server action wrapper
+        let success = false;
+        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            try {
+              const result: ReportCardsOutput = await generateReportCards({
+                studentsData: batch,
+                gradeRules,
+              });
+    
+              if (result && result.results) {
+                allResults.push(...result.results);
+                success = true;
+                break; // Exit retry loop on success
+              }
+            } catch (error) {
+                if (attempt === MAX_RETRIES) {
+                    console.error(`Error generating report card for batch starting at index ${i} after ${MAX_RETRIES} retries:`, error);
+                } else {
+                    console.warn(`Attempt ${attempt + 1} failed for batch starting at ${i}. Retrying...`);
+                }
+            }
         }
+        if (!success) {
+            failedBatches.push(batch);
+        }
+
         setGenerationProgress(
           ((i + batch.length) / plainStudentsData.length) * 100
         );
@@ -151,7 +164,17 @@ export function BatchDownloader({
 
       setReportCards(allResults);
 
-      if (successfulGenerations > 0 && allResults.length > 0) {
+      const successfulGenerations = allResults.length;
+
+      if (failedBatches.length > 0) {
+        const failedStudentNames = failedBatches.flat().map(s => s.Name || 'Unknown');
+        toast({
+            title: 'Partial Generation Failure',
+            description: `Successfully generated ${successfulGenerations} report cards. Failed to generate for: ${failedStudentNames.join(', ')}. Please try again.`,
+            variant: 'destructive',
+            duration: 10000,
+        });
+      } else if (successfulGenerations > 0) {
           if (isModal) {
             toast({
                 title: 'Generation Complete',
@@ -338,3 +361,5 @@ export function BatchDownloader({
     </Dialog>
   );
 }
+
+    
