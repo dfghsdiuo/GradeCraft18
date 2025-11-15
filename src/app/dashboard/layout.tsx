@@ -47,9 +47,9 @@ export default function DashboardLayout({
     <div className="flex min-h-screen w-full flex-col">
       <header className="sticky top-0 z-10 flex h-24 items-center justify-between gap-4 border-b bg-card px-4 md:px-6">
         <div className="w-1/3">
-          <DashboardNav />
+          {/* Intentionally left blank for spacing */}
         </div>
-        <div className="flex-1 text-center">
+        <div className="flex flex-1 flex-col items-center text-center">
             <Logo />
             <p className="mt-1 text-lg font-semibold text-muted-foreground">
               Automate student report cards with a single click.
@@ -71,6 +71,7 @@ export default function DashboardLayout({
         </div>
       </header>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+        <DashboardNav />
         <div className="flex-1">{children}</div>
       </main>
     </div>
