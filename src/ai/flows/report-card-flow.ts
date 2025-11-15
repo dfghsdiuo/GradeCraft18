@@ -27,7 +27,8 @@ const StudentResultSchema = z.object({
   subjects: z.array(z.object({
     name: z.string(),
     marks: z.number(),
-  })).describe("An array of subjects and marks for the student.")
+  })).describe("An array of subjects and their marks for the student."),
+  remarks: z.string().describe("A unique, one-sentence remark based on the student's performance.")
 });
 
 const ReportCardsOutputSchema = z.object({
@@ -54,8 +55,9 @@ Your task is to process EACH student's data and calculate the following:
 4.  Calculate the 'Percentage' based on the total obtained and total possible marks.
 5.  Determine the 'Grade' based on the percentage (e.g., A, B, C, F).
 6.  List the subjects and their marks.
+7.  Generate a unique, one-sentence 'remarks' for each student based on their performance.
 
-Return an array of objects, where each object contains the original student data, and the calculated 'totalMarks', 'percentage', 'grade', and a list of 'subjects'.
+Return an array of objects, where each object contains the original student data, and the calculated 'totalMarks', 'percentage', 'grade', 'subjects', and 'remarks'.
 
 Student Data:
 {{{json studentsData}}}

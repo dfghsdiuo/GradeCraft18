@@ -1,3 +1,4 @@
+'use client';
 
 type Subject = {
     name: string;
@@ -10,18 +11,32 @@ type StudentResult = {
     percentage: number;
     grade: string;
     subjects: Subject[];
+    remarks: string;
 };
 
 export const generateReportCardHtml = (result: StudentResult): string => {
-    const { studentData, totalMarks, percentage, grade, subjects } = result;
+    const { studentData, totalMarks, percentage, grade, subjects, remarks } = result;
 
     const studentName = studentData['Name'] || 'N/A';
     const fathersName = studentData["Father's Name"] || 'N/A';
     const rollNo = studentData['Roll No.'] || 'N/A';
     const studentClass = studentData['Class'] || 'N/A';
 
-    const schoolName = "Springfield High"; // Example, should be from settings
-    const session = "2024-2025"; // Example, should be from settings
+    let schoolName = "Springfield High";
+    let session = "2024-2025";
+    let schoolLogoUrl = "/school-logo-placeholder.png"; 
+    let teacherSignatureUrl = "";
+    let principalSignatureUrl = "";
+
+
+    if (typeof window !== 'undefined') {
+        schoolName = localStorage.getItem('schoolName') || schoolName;
+        session = localStorage.getItem('sessionYear') || session;
+        schoolLogoUrl = localStorage.getItem('schoolLogo') || schoolLogoUrl;
+        teacherSignatureUrl = localStorage.getItem("Class Teacher's Signature") || "";
+        principalSignatureUrl = localStorage.getItem("Principal's Signature") || "";
+    }
+
 
     const subjectsRows = subjects.map(subject => `
         <tr class="border-b">
@@ -30,12 +45,23 @@ export const generateReportCardHtml = (result: StudentResult): string => {
             <td class="p-2 text-center">${subject.marks}</td>
         </tr>
     `).join('');
+    
+    const schoolLogoImg = schoolLogoUrl ? `<img src="${schoolLogoUrl}" alt="School Logo" class="h-24 w-24 object-contain" />` : '';
+    const teacherSignatureImg = teacherSignatureUrl ? `<img src="${teacherSignatureUrl}" alt="Teacher's Signature" class="h-16 object-contain mx-auto" />` : '';
+    const principalSignatureImg = principalSignatureUrl ? `<img src="${principalSignatureUrl}" alt="Principal's Signature" class="h-16 object-contain mx-auto" />` : '';
+
 
     return `
-        <div class="p-8 font-sans bg-white" style="width: 210mm; min-height: 297mm; margin: auto;">
-            <div class="text-center border-b-2 pb-4 border-gray-400">
-                <h1 class="text-4xl font-bold text-blue-700">${schoolName}</h1>
-                <p class="text-lg">Final Report Card - Session ${session}</p>
+        <div class="p-8 font-sans bg-white" style="width: 210mm; min-height: 297mm; margin: auto; border: 1px solid #eee;">
+            <div class="text-center border-b-2 pb-4 border-gray-400 flex items-center justify-between">
+                <div class="w-1/4">
+                    ${schoolLogoImg}
+                </div>
+                <div class="w-1/2">
+                    <h1 class="text-4xl font-bold text-blue-700">${schoolName}</h1>
+                    <p class="text-lg">Final Report Card - Session ${session}</p>
+                </div>
+                <div class="w-1/4"></div>
             </div>
             <div class="mt-6 grid grid-cols-2 gap-4 text-base">
                 <div><strong>Student Name:</strong> ${studentName}</div>
@@ -72,13 +98,15 @@ export const generateReportCardHtml = (result: StudentResult): string => {
                 </div>
             </div>
             <div class="mt-12 text-sm text-gray-700">
-                <p><strong>Remarks:</strong> Overall performance is <strong>${grade === 'A' ? 'Excellent' : grade === 'B' ? 'Good' : 'Satisfactory'}</strong>. Keep up the good work.</p>
+                <p><strong>Remarks:</strong> ${remarks}</p>
             </div>
-            <div class="mt-24 flex justify-between text-center">
+            <div class="mt-24 flex justify-between text-center" style="position: absolute; bottom: 50px; width: calc(100% - 4rem);">
                 <div>
+                     ${teacherSignatureImg}
                     <div class="border-t-2 w-48 pt-2">Class Teacher's Signature</div>
                 </div>
                 <div>
+                    ${principalSignatureImg}
                     <div class="border-t-2 w-48 pt-2">Principal's Signature</div>
                 </div>
             </div>

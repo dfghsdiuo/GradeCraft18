@@ -1,12 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -31,12 +28,21 @@ const schoolLogoPlaceholder = PlaceHolderImages.find(
 function ImageUploader({
   label,
   description,
+  storageKey,
 }: {
   label: string;
   description: string;
+  storageKey: string;
 }) {
   const [image, setImage] = useState<string | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const storedImage = localStorage.getItem(storageKey);
+    if (storedImage) {
+      setImage(storedImage);
+    }
+  }, [storageKey]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -44,7 +50,9 @@ function ImageUploader({
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onloadend = () => {
-          setImage(reader.result as string);
+          const result = reader.result as string;
+          setImage(result);
+          localStorage.setItem(storageKey, result);
           toast({ title: `${label} updated successfully!` });
         };
         reader.readAsDataURL(file);
@@ -71,7 +79,7 @@ function ImageUploader({
               className="object-contain rounded-md"
             />
           ) : (
-            schoolLogoPlaceholder && (
+            label === "School Logo" && schoolLogoPlaceholder && (
               <Image
                 src={schoolLogoPlaceholder.imageUrl}
                 alt={schoolLogoPlaceholder.description}
@@ -85,14 +93,14 @@ function ImageUploader({
         </div>
         <div>
           <Label
-            htmlFor={`upload-${label.toLowerCase().replace(' ', '-')}`}
+            htmlFor={`upload-${storageKey}`}
             className="cursor-pointer"
           >
             <Button asChild variant="outline">
               <span className="cursor-pointer">Change</span>
             </Button>
             <input
-              id={`upload-${label.toLowerCase().replace(' ', '-')}`}
+              id={`upload-${storageKey}`}
               type="file"
               className="hidden"
               accept="image/png, image/jpeg"
@@ -108,14 +116,26 @@ function ImageUploader({
 
 export function SettingsForm() {
   const [themeColor, setThemeColor] = useState('blue');
+  const [schoolName, setSchoolName] = useState('');
+  const [sessionYear, setSessionYear] = useState('');
   const { toast } = useToast();
 
-  const handleSettingChange = useCallback(() => {
-    toast({
-      title: 'Settings Saved',
-      description: 'Your settings have been saved automatically.',
-    });
-  }, [toast]);
+  useEffect(() => {
+    setThemeColor(localStorage.getItem('themeColor') || 'blue');
+    setSchoolName(localStorage.getItem('schoolName') || '');
+    setSessionYear(localStorage.getItem('sessionYear') || '');
+  }, []);
+
+  const handleSettingChange = useCallback(
+    (key: string, value: string) => {
+      localStorage.setItem(key, value);
+      toast({
+        title: 'Settings Saved',
+        description: 'Your settings have been saved automatically.',
+      });
+    },
+    [toast]
+  );
 
   return (
     <Card className="w-full shadow-lg">
@@ -123,21 +143,37 @@ export function SettingsForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <Label htmlFor="school-name">School Name</Label>
-            <Input id="school-name" placeholder="e.g., Springfield High" onChange={handleSettingChange} />
+            <Input
+              id="school-name"
+              placeholder="e.g., Springfield High"
+              value={schoolName}
+              onChange={(e) => {
+                setSchoolName(e.target.value);
+                handleSettingChange('schoolName', e.target.value);
+              }}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="session-year">Session Year</Label>
-            <Input id="session-year" placeholder="e.g., 2024-2025" onChange={handleSettingChange}/>
+            <Input
+              id="session-year"
+              placeholder="e.g., 2024-2025"
+              value={sessionYear}
+              onChange={(e) => {
+                setSessionYear(e.target.value);
+                handleSettingChange('sessionYear', e.target.value);
+              }}
+            />
           </div>
         </div>
 
         <div className="space-y-2">
           <Label>Theme Color</Label>
           <RadioGroup
-            defaultValue={themeColor}
+            value={themeColor}
             onValueChange={(value) => {
               setThemeColor(value);
-              handleSettingChange();
+              handleSettingChange('themeColor', value);
             }}
             className="flex items-center gap-4"
           >
@@ -172,14 +208,17 @@ export function SettingsForm() {
           <ImageUploader
             label="School Logo"
             description="PNG with transparent background recommended."
+            storageKey="schoolLogo"
           />
           <ImageUploader
             label="Class Teacher's Signature"
             description="Upload a clear signature."
+            storageKey="Class Teacher's Signature"
           />
           <ImageUploader
             label="Principal's Signature"
             description="Upload a clear signature."
+            storageKey="Principal's Signature"
           />
         </div>
       </CardContent>
