@@ -157,19 +157,37 @@ export function ReportCardDisplay({
     });
     try {
       const subject = `Report Card for ${studentName}`;
-      const body = `Hello,\n\nPlease find the report card for ${studentName} attached.\n\nTo share the file, please download the PDF and attach it to your email.`;
-      
-      // Note: Attaching files via mailto is not reliably supported. 
-      // This will open the default mail client with subject and body.
-      // The user would need to manually attach the downloaded PDF.
+      const body = `Hello,\n\nPlease find the report card for ${studentName} attached.`;
       const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      
+      const pngBlob = await generatePngBlob();
+      if (pngBlob) {
+        const file = new File([pngBlob], `${studentName}_report_card.png`, { type: 'image/png' });
+        // While navigator.share can handle files, mailto links cannot.
+        // We will attempt to use the share API for a better experience.
+        const shareData = {
+          title: subject,
+          text: body,
+          files: [file],
+        };
+        if (navigator.share && navigator.canShare(shareData)) {
+          await navigator.share(shareData);
+          return;
+        }
+      }
+      
+      // Fallback to basic mailto link if share API is not supported or fails
       window.location.href = mailtoLink;
+      toast({
+        title: 'Email Client Opening',
+        description: 'Please attach the downloaded PDF to your email.',
+      });
 
     } catch (error) {
       console.error('Error sharing to Email:', error);
       toast({
         title: 'Email Failed',
-        description: 'Could not open the email client.',
+        description: 'Could not open the email client or prepare the file.',
         variant: 'destructive',
       });
     }

@@ -191,7 +191,7 @@ export default function HistoryPage() {
 
   const handleEmailShare = (item: HistoryItem) => {
     const subject = `Report Cards Generated: ${item.fileName}`;
-    const body = `Hello,\n\nThe report cards for ${item.fileName} have been generated.\n\nTo view and download them, please re-upload the source file in the Report Card Generator application.`;
+    const body = `Hello,\n\nThe report cards for ${item.fileName} have been generated and are available for download from the application.`;
     const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = mailtoLink;
   };
