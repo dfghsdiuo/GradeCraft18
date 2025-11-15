@@ -22,6 +22,7 @@ interface HistoryItem {
   fileName: string;
   date: string;
   fileCount: number;
+  studentsData: any[];
 }
 
 interface ReportCardInfo {
@@ -127,7 +128,8 @@ export function FileUploader() {
 
   const saveToHistory = (
     name: string,
-    fileCount: number
+    fileCount: number,
+    studentsData: any[],
   ) => {
     if (!isClient) return;
     try {
@@ -139,12 +141,20 @@ export function FileUploader() {
         fileName: name,
         date: new Date().toISOString(),
         fileCount: fileCount,
+        studentsData: studentsData,
       };
 
       const updatedHistory = [newHistoryItem, ...history];
       localStorage.setItem('reportCardHistory', JSON.stringify(updatedHistory));
     } catch (error) {
       console.error("Failed to save to history", error);
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        toast({
+          title: 'History Not Saved',
+          description: 'Could not save to history because browser storage is full.',
+          variant: 'destructive',
+        });
+      }
     }
   };
 
@@ -225,7 +235,7 @@ export function FileUploader() {
       setReportCards(allResults);
 
       if (successfulGenerations > 0) {
-        saveToHistory(file.name, successfulGenerations);
+        saveToHistory(file.name, successfulGenerations, plainStudentsData);
       }
 
       toast({
@@ -409,3 +419,5 @@ export function FileUploader() {
     </div>
   );
 }
+
+    

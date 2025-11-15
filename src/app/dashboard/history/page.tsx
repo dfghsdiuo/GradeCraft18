@@ -16,6 +16,7 @@ import {
   FileText,
   Trash2,
   History as HistoryIcon,
+  Loader2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -29,26 +30,52 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { BatchDownloader } from '@/components/dashboard/batch-downloader';
+import { generateReportCards, ReportCardsOutput } from '@/ai/flows/report-card-flow';
+import { generateReportCardHtml, Subject } from '@/components/dashboard/report-card-template';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface HistoryItem {
   id: number;
   fileName: string;
   date: string;
   fileCount: number;
+  studentsData: any[];
+}
+
+const BATCH_SIZE = 50;
+
+async function addPageToPdf(pdf: jsPDF, htmlContent: string) {
+  const reportElement = document.createElement('div');
+  reportElement.innerHTML = htmlContent;
+  reportElement.style.position = 'absolute';
+  reportElement.style.left = '-9999px';
+  reportElement.style.width = '210mm'; // A4 width
+  document.body.appendChild(reportElement);
+
+  const canvas = await html2canvas(reportElement, {
+    scale: 2,
+    useCORS: true,
+  });
+
+  document.body.removeChild(reportElement);
+
+  const imgData = canvas.toDataURL('image/png');
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = pdf.internal.pageSize.getHeight();
+  const canvasWidth = canvas.width;
+  const canvasHeight = canvas.height;
+  const ratio = canvasWidth / canvasHeight;
+  const height = pdfWidth / ratio;
+
+  pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, Math.min(height, pdfHeight));
 }
 
 export default function HistoryPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -96,6 +123,65 @@ export default function HistoryPage() {
     });
   };
 
+  const handleDownload = async (item: HistoryItem) => {
+    setDownloadingId(item.id);
+    toast({
+      title: 'Generation & Download Started',
+      description: `Preparing report cards for "${item.fileName}". Please wait.`,
+    });
+
+    try {
+      const { studentsData, fileName } = item;
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      let generatedCount = 0;
+
+      for (let i = 0; i < studentsData.length; i += BATCH_SIZE) {
+        const batch = studentsData.slice(i, i + BATCH_SIZE);
+        const result: ReportCardsOutput = await generateReportCards({
+          studentsData: batch,
+        });
+
+        if (result && result.results) {
+          for (const [index, res] of result.results.entries()) {
+            const subjects: Subject[] = JSON.parse(res.subjects || '[]');
+            const reportCardHtml = generateReportCardHtml({ ...res, subjects });
+            
+            if (index > 0 || i > 0) {
+              pdf.addPage();
+            }
+            await addPageToPdf(pdf, reportCardHtml);
+            
+            generatedCount++;
+          }
+        }
+      }
+
+      pdf.save(`${fileName.replace('.xlsx', '')}_report_cards.pdf`);
+
+      toast({
+        title: 'Download Complete',
+        description: `Successfully downloaded ${generatedCount} report cards in a single PDF.`,
+      });
+
+    } catch (error: any) {
+      console.error('Error during batch download:', error);
+      toast({
+        title: 'Download Failed',
+        description: error.message || 'An error occurred during the download process.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+
   const handleEmailShare = (item: HistoryItem) => {
     const subject = `Report Cards Generated: ${item.fileName}`;
     const body = `Hello,\n\nThe report cards for ${item.fileName} have been generated.\n\nTo view and download them, please re-upload the source file in the Report Card Generator application.`;
@@ -104,7 +190,11 @@ export default function HistoryPage() {
   };
 
   if (!isClient) {
-    return null; // or a loading spinner
+    return (
+      <div className="flex justify-center items-center h-full">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
@@ -163,20 +253,19 @@ export default function HistoryPage() {
                   {item.fileCount} report cards
                 </p>
                 <div className="flex items-center gap-2">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <Download className="mr-2 h-4 w-4" />
-                        Download
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Download Batch: {item.fileName}</DialogTitle>
-                      </DialogHeader>
-                      <BatchDownloader originalFileName={item.fileName} />
-                    </DialogContent>
-                  </Dialog>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDownload(item)}
+                    disabled={downloadingId === item.id}
+                  >
+                    {downloadingId === item.id ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="mr-2 h-4 w-4" />
+                    )}
+                    Download
+                  </Button>
 
                   <Button
                     variant="secondary"
@@ -224,3 +313,5 @@ export default function HistoryPage() {
     </div>
   );
 }
+
+    
