@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -6,9 +9,16 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Share2, FileText, Trash2, History as HistoryIcon } from 'lucide-react';
+import {
+  Download,
+  Share2,
+  FileText,
+  Trash2,
+  History as HistoryIcon,
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
-const MOCK_HISTORY = [
+const MOCK_HISTORY_DATA = [
   {
     id: 1,
     fileName: 'class10_final_reports.zip',
@@ -30,6 +40,65 @@ const MOCK_HISTORY = [
 ];
 
 export default function HistoryPage() {
+  const [history, setHistory] = useState(MOCK_HISTORY_DATA);
+  const { toast } = useToast();
+
+  const handleDelete = (id: number) => {
+    setHistory(history.filter((item) => item.id !== id));
+    toast({
+      title: 'Deleted',
+      description: 'The history item has been removed.',
+    });
+  };
+
+  const handleDownload = (fileName: string) => {
+    // This is a dummy download function.
+    // In a real app, you would fetch the file from a server.
+    const blob = new Blob([`Dummy content for ${fileName}`], {
+      type: 'text/plain',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({
+      title: 'Download Started',
+      description: `${fileName} is being downloaded.`,
+    });
+  };
+
+  const handleShare = async (fileName: string) => {
+    const shareData = {
+      title: 'Report Cards',
+      text: `Check out the generated report cards: ${fileName}`,
+      url: window.location.href,
+    };
+    try {
+      if (navigator.share && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+        toast({ title: 'Shared successfully!' });
+      } else {
+        // Fallback for browsers that don't support the Web Share API
+        navigator.clipboard.writeText(shareData.url);
+        toast({
+          title: 'Link Copied',
+          description: 'Sharing is not supported, but the link has been copied to your clipboard.',
+        });
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+      toast({
+        title: 'Sharing Failed',
+        description: 'Could not share the file.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div>
       <div className="mb-8">
@@ -40,10 +109,13 @@ export default function HistoryPage() {
           Review and download previously generated report card batches.
         </p>
       </div>
-      {MOCK_HISTORY.length > 0 ? (
+      {history.length > 0 ? (
         <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
-          {MOCK_HISTORY.map((item) => (
-            <Card key={item.id} className="shadow-lg transition-transform hover:scale-[1.02] hover:shadow-xl">
+          {history.map((item) => (
+            <Card
+              key={item.id}
+              className="shadow-lg transition-transform hover:scale-[1.02] hover:shadow-xl"
+            >
               <CardHeader className="flex flex-row items-start gap-4">
                 <FileText className="h-10 w-10 text-primary" />
                 <div>
@@ -58,14 +130,26 @@ export default function HistoryPage() {
                   {item.fileCount} report cards
                 </p>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDownload(item.fileName)}
+                  >
                     <Download className="mr-2 h-4 w-4" />
                     Download
                   </Button>
-                  <Button variant="ghost" size="icon">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleShare(item.fileName)}
+                  >
                     <Share2 className="h-4 w-4" />
                   </Button>
-                   <Button variant="destructive" size="icon">
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    onClick={() => handleDelete(item.id)}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
