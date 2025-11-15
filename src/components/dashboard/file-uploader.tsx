@@ -135,9 +135,13 @@ export function FileUploader() {
       const workbook = XLSX.read(data);
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      const students = XLSX.utils.sheet_to_json(worksheet) as Record<string, any>[];
+      const studentsData = XLSX.utils.sheet_to_json(worksheet);
+      
+      // Convert to plain JS objects to avoid serialization issues
+      const plainStudentsData = JSON.parse(JSON.stringify(studentsData));
 
-      if (students.length === 0) {
+
+      if (plainStudentsData.length === 0) {
         toast({
           title: 'Empty File',
           description: 'The selected file contains no student data.',
@@ -158,7 +162,7 @@ export function FileUploader() {
         });
       }, 500);
 
-      const result = await generateReportCards({ studentsData: students });
+      const result = await generateReportCards({ studentsData: plainStudentsData });
       
       clearInterval(progressInterval);
       setGenerationProgress(100);
@@ -170,7 +174,7 @@ export function FileUploader() {
         }
         toast({
           title: 'Generation Complete',
-          description: `${result.reportCards.length} of ${students.length} report cards have been successfully generated.`,
+          description: `${result.reportCards.length} of ${plainStudentsData.length} report cards have been successfully generated.`,
         });
       } else {
         throw new Error("AI did not return the expected report card data.");
