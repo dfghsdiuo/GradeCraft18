@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -15,7 +16,6 @@ import {
   FileText,
   Trash2,
   History as HistoryIcon,
-  Info,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -32,12 +32,11 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import Link from 'next/link';
+import { BatchDownloader } from '@/components/dashboard/batch-downloader';
 
 interface HistoryItem {
   id: number;
@@ -174,24 +173,9 @@ export default function HistoryPage() {
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                          <Info className="h-6 w-6 text-primary" />
-                          Batch Download Not Available
-                        </DialogTitle>
-                        <DialogDescription className="pt-4 text-base text-foreground">
-                          This application does not store the content of generated report cards. To download the PDFs, you need to re-upload the original Excel file.
-                          <br /><br />
-                          Would you like to go to the Generator page now?
-                        </DialogDescription>
+                        <DialogTitle>Download Batch: {item.fileName}</DialogTitle>
                       </DialogHeader>
-                      <AlertDialogFooter className="mt-4">
-                        <DialogTrigger asChild>
-                           <Button variant="outline">Cancel</Button>
-                        </DialogTrigger>
-                        <Link href="/dashboard">
-                          <Button>Go to Generator</Button>
-                        </Link>
-                      </AlertDialogFooter>
+                      <BatchDownloader originalFileName={item.fileName} />
                     </DialogContent>
                   </Dialog>
 
@@ -214,7 +198,7 @@ export default function HistoryPage() {
                         <AlertDialogTitle>Delete History Item?</AlertDialogTitle>
                         <AlertDialogDescription>
                             Are you sure you want to delete the history for "{item.fileName}"? This action cannot be undone.
-                        </AlertDialogDescription>
+                        </Description>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
