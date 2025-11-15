@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { UploadCloud, File, X, Loader2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -29,29 +30,76 @@ const BATCH_SIZE = 10;
 
 export function FileUploader() {
   const [file, setFile] = useState<File | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportCards, setReportCards] = useState<ReportCardInfo[]>([]);
   const [generationProgress, setGenerationProgress] = useState(0);
   const { toast } = useToast();
+  const [isClient, setIsClient] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const selectedFile = e.target.files[0];
-      if (
-        selectedFile.type ===
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      ) {
-        setFile(selectedFile);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (isClient) {
+      try {
+        const storedReportCards = localStorage.getItem('generatedReportCards');
+        const storedFileName = localStorage.getItem('lastUploadedFileName');
+        if (storedReportCards) {
+          setReportCards(JSON.parse(storedReportCards));
+          setFileName(storedFileName);
+        }
+      } catch (error) {
+        console.error('Failed to parse report cards from localStorage', error);
         setReportCards([]);
-      } else {
-        toast({
-          title: 'Invalid File Type',
-          description: 'Please upload a .xlsx file.',
-          variant: 'destructive',
-        });
+        setFileName(null);
       }
     }
+  }, [isClient]);
+
+  useEffect(() => {
+    if (isClient) {
+      try {
+        localStorage.setItem('generatedReportCards', JSON.stringify(reportCards));
+        if (fileName) {
+          localStorage.setItem('lastUploadedFileName', fileName);
+        } else {
+            localStorage.removeItem('lastUploadedFileName');
+        }
+      } catch (error) {
+        console.error('Failed to save report cards to localStorage', error);
+      }
+    }
+  }, [reportCards, fileName, isClient]);
+
+  const handleSetFile = (selectedFile: File | null) => {
+    if (selectedFile) {
+        if (
+            selectedFile.type ===
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        ) {
+            setFile(selectedFile);
+            setFileName(selectedFile.name);
+            setReportCards([]); // Clear previous results when new file is selected
+        } else {
+            toast({
+                title: 'Invalid File Type',
+                description: 'Please upload a .xlsx file.',
+                variant: 'destructive',
+            });
+        }
+    } else {
+        setFile(null);
+        setFileName(null);
+        setReportCards([]);
+    }
+  }
+
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleSetFile(e.target.files ? e.target.files[0] : null);
   };
 
   const handleDragEnter = (e: React.DragEvent<HTMLLabelElement>) => {
@@ -74,25 +122,12 @@ export function FileUploader() {
     e.stopPropagation();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const droppedFile = e.dataTransfer.files[0];
-      if (
-        droppedFile.type ===
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      ) {
-        setFile(droppedFile);
-        setReportCards([]);
-      } else {
-        toast({
-          title: 'Invalid File Type',
-          description: 'Please upload a .xlsx file.',
-          variant: 'destructive',
-        });
-      }
+      handleSetFile(e.dataTransfer.files[0]);
     }
   };
 
   const saveToHistory = (
-    fileName: string,
+    name: string,
     fileCount: number
   ) => {
     try {
@@ -101,7 +136,7 @@ export function FileUploader() {
       
       const newHistoryItem: HistoryItem = {
         id: Date.now(),
-        fileName: `${fileName.split('.')[0]}.zip`,
+        fileName: `${name.split('.')[0]}.zip`,
         date: new Date().toISOString().split('T')[0],
         fileCount: fileCount,
       };
@@ -204,14 +239,13 @@ export function FileUploader() {
   };
 
   const clearFile = () => {
-    setFile(null);
-    setReportCards([]);
+    handleSetFile(null);
     setGenerationProgress(0);
   };
 
   return (
     <div className="flex w-full flex-col items-center gap-6">
-      {!file ? (
+      {!file && !fileName ? (
         <label
           htmlFor="file-upload"
           className={`relative flex w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed bg-accent p-12 text-center transition-colors ${
@@ -243,10 +277,12 @@ export function FileUploader() {
           <div className="flex items-center gap-3">
             <File className="h-8 w-8 text-primary" />
             <div>
-              <p className="font-medium text-foreground">{file.name}</p>
-              <p className="text-sm text-muted-foreground">
-                {(file.size / 1024).toFixed(2)} KB
-              </p>
+              <p className="font-medium text-foreground">{fileName}</p>
+              {file && (
+                <p className="text-sm text-muted-foreground">
+                    {(file.size / 1024).toFixed(2)} KB
+                </p>
+              )}
             </div>
           </div>
           <Button variant="ghost" size="icon" onClick={clearFile}>
