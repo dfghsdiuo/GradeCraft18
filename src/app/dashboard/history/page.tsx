@@ -200,7 +200,11 @@ export default function HistoryPage() {
       subject
     )}&body=${encodeURIComponent(body)}`;
     window.location.href = mailtoLink;
-    setEmailingItem(null);
+    setEmailingItem(null); // This is already handled by the dialog's onClose
+    toast({
+      title: 'Email Client Opening',
+      description: 'Your email client is opening with a pre-filled draft.',
+    });
   };
 
   if (!isClient) {

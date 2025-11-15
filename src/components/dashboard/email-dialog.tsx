@@ -18,7 +18,7 @@ import { Loader2 } from 'lucide-react';
 interface EmailDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSend: (email: string) => Promise<void>;
+  onSend: (email: string) => void;
   title: string;
   description?: string;
 }
@@ -28,7 +28,7 @@ export function EmailDialog({
   onClose,
   onSend,
   title,
-  description
+  description,
 }: EmailDialogProps) {
   const [email, setEmail] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -45,9 +45,11 @@ export function EmailDialog({
     }
 
     setIsSending(true);
-    await onSend(email);
+    // onSend is expected to open a mail client, not send an email directly.
+    onSend(email);
     setIsSending(false);
-    setEmail(''); // Reset email after sending
+    setEmail(''); // Reset email after triggering send
+    onClose(); // Close the dialog
   };
 
   return (
@@ -55,9 +57,7 @@ export function EmailDialog({
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          {description && (
-            <DialogDescription>{description}</DialogDescription>
-          )}
+          {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
@@ -82,10 +82,10 @@ export function EmailDialog({
             {isSending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Sending...
+                Preparing...
               </>
             ) : (
-              'Send Email'
+              'Send'
             )}
           </Button>
         </DialogFooter>

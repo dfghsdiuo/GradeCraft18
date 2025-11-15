@@ -162,28 +162,32 @@ export function ReportCardDisplay({
       const pngBlob = await generatePngBlob();
       const body = `Hello,\n\nPlease find the report card for ${studentName} attached.`;
 
-      // The best experience is to use the share API with files.
       if (pngBlob && navigator.share && navigator.canShare) {
-         const file = new File([pngBlob], `${studentName}_report_card.png`, { type: 'image/png' });
-         const shareData = {
-           title: subject,
-           text: `Here is the report card for ${studentName}.`,
-           files: [file],
-         };
-         if (navigator.canShare(shareData)) {
-            await navigator.share(shareData);
-            setIsEmailDialogOpen(false);
-            return;
-         }
+        const file = new File([pngBlob], `${studentName.replace(/\s+/g, '_')}_report_card.png`, { type: 'image/png' });
+        const shareData = {
+          title: subject,
+          text: `Here is the report card for ${studentName}.`,
+          files: [file],
+        };
+        // Using share API is a better experience as it opens native share dialog
+        if (navigator.canShare(shareData)) {
+          await navigator.share(shareData);
+          toast({
+            title: 'Share Dialog Opened',
+            description: 'Please select an app to share the report card.',
+          });
+          setIsEmailDialogOpen(false);
+          return;
+        }
       }
 
-      // Fallback to mailto link
+      // Fallback to mailto link if share API is not supported or fails
       const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       window.location.href = mailtoLink;
       setIsEmailDialogOpen(false);
-       toast({
+      toast({
         title: 'Email Client Opening',
-        description: 'Please attach the downloaded PDF if the image is not already attached.',
+        description: 'Your email client is opening with a pre-filled draft.',
       });
 
     } catch (error) {
@@ -257,6 +261,7 @@ export function ReportCardDisplay({
         onClose={() => setIsEmailDialogOpen(false)}
         onSend={handleEmailSend}
         title={`Email Report Card for ${studentName}`}
+        description="Enter the recipient's email address. This will open your default email client or a share dialog."
      />
     </>
   );
