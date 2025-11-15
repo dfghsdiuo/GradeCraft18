@@ -15,7 +15,9 @@ const StudentSchema = z.object({
   "Father's Name": z.string().optional(),
   "Roll No.": z.any().optional(),
   "Class": z.any().optional(),
-}).catchall(z.any()).describe('An object representing a single student\'s data, including subjects and marks.');
+  // This allows for other properties (the subjects) without defining them explicitly
+}).passthrough().describe('An object representing a single student\'s data, including subjects and marks.');
+
 
 const ReportCardsInputSchema = z.object({
   studentsData: z
@@ -54,7 +56,7 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert in processing student data.
 You will be given an array of student data objects in JSON format.
 Your task is to process EACH student's data and calculate the following:
-1.  Identify all numeric subject marks.
+1.  Identify all numeric subject marks. The subjects are the keys other than 'Name', 'Father\'s Name', 'Roll No.', and 'Class'.
 2.  Calculate the 'Total Obtained' marks by summing up all subject marks.
 3.  Assume 'Total Marks' are 100 for each subject unless specified otherwise.
 4.  Calculate the 'Percentage' based on the total obtained and total possible marks.
