@@ -1,3 +1,10 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "school_logo",
+      "description": "Placeholder for school logo",
+      "imageUrl": "https://images.unsplash.com/photo-1709227040897-14f6c6687086?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxsb2dvJTIwc2Nob29sfGVufDB8fHx8MTc2MzE4OTkzNnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "logo school"
+    }
+  ]
 }
