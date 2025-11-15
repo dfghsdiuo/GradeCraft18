@@ -11,7 +11,6 @@ import {
 import { Button } from '@/components/ui/button';
 import {
   Download,
-  Mail,
   FileText,
   Trash2,
   History as HistoryIcon,
@@ -36,7 +35,6 @@ import {
 import { generateReportCardHtml } from '@/components/dashboard/report-card-template';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { EmailDialog } from '@/components/dashboard/email-dialog';
 
 interface HistoryItem {
   id: number;
@@ -79,7 +77,6 @@ export default function HistoryPage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
-  const [emailingItem, setEmailingItem] = useState<HistoryItem | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -192,21 +189,6 @@ export default function HistoryPage() {
     }
   };
 
-  const handleEmailSend = (email: string) => {
-    if (!emailingItem) return;
-    const subject = `Report Cards Generated: ${emailingItem.fileName}`;
-    const body = `Hello,\n\nThe report cards for ${emailingItem.fileName} have been generated and are available for download from the application.`;
-    const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(
-      subject
-    )}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailtoLink;
-    setEmailingItem(null); // This is already handled by the dialog's onClose
-    toast({
-      title: 'Email Client Opening',
-      description: 'Your email client is opening with a pre-filled draft.',
-    });
-  };
-
   if (!isClient) {
     return (
       <div className="flex justify-center items-center h-full">
@@ -287,15 +269,6 @@ export default function HistoryPage() {
                       )}
                       Download
                     </Button>
-
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setEmailingItem(item)}
-                    >
-                      <Mail className="mr-2 h-4 w-4" />
-                      Email
-                    </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="destructive" size="icon">
@@ -339,15 +312,6 @@ export default function HistoryPage() {
           </div>
         )}
       </div>
-      {emailingItem && (
-        <EmailDialog
-          isOpen={!!emailingItem}
-          onClose={() => setEmailingItem(null)}
-          onSend={handleEmailSend}
-          title={`Email Notification for ${emailingItem.fileName}`}
-          description="Enter the recipient's email address to notify them that the report card batch is ready for download."
-        />
-      )}
     </>
   );
 }

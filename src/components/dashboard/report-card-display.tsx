@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Share2, Eye, Loader2, Mail } from 'lucide-react';
+import { Download, Share2, Eye, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -20,7 +20,6 @@ import {
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useState } from 'react';
-import { EmailDialog } from './email-dialog';
 
 interface ReportCardDisplayProps {
   htmlContent: string;
@@ -33,7 +32,6 @@ export function ReportCardDisplay({
 }: ReportCardDisplayProps) {
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
-  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
 
   const getCanvas = async () => {
     const reportElement = document.createElement('div');
@@ -155,59 +153,6 @@ export function ReportCardDisplay({
     }
   };
 
-  const handleEmailSend = async (email: string) => {
-    toast({
-      title: 'Preparing Email...',
-      description: 'Please wait a moment.',
-    });
-    try {
-      const subject = `Report Card for ${studentName}`;
-      const pngBlob = await generatePngBlob();
-       if (!pngBlob) {
-        throw new Error('Failed to create PNG for emailing.');
-      }
-      
-      const file = new File([pngBlob], `${studentName.replace(/\s+/g, '_')}_report_card.png`, { type: 'image/png' });
-      const shareData = {
-        title: subject,
-        text: `Here is the report card for ${studentName}.`,
-        files: [file],
-      };
-
-      // The Web Share API is the best way to "send" a file from the client.
-      // It opens a native dialog to share with any compatible app, including email.
-      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-          await navigator.share(shareData);
-          toast({
-            title: 'Share Dialog Opened',
-            description: 'Choose an application to send the report card.',
-          });
-      } else {
-        // Fallback to mailto link if Web Share API is not supported.
-        // This won't attach the file but will open the email client.
-        const body = `Hello,\n\nPlease find the report card for ${studentName} attached.\n\n(Note: If the file is not attached, please use the 'Share' or 'Download' button to get the file.)`;
-        const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        window.location.href = mailtoLink;
-        toast({
-          title: 'Email Client Opening',
-          description: 'Your default email client is opening. Please attach the report card manually if needed.',
-        });
-      }
-    } catch (error: any) {
-      console.error('Error preparing email:', error);
-      if (error.name !== 'AbortError') {
-        toast({
-          title: 'Email Failed',
-          description: 'Could not open the email client or prepare the file.',
-          variant: 'destructive',
-        });
-      }
-    } finally {
-        setIsEmailDialogOpen(false);
-    }
-  };
-
-
   return (
     <>
     <Card className="shadow-lg">
@@ -254,22 +199,8 @@ export function ReportCardDisplay({
           <Share2 className="mr-2" />
           Share
         </Button>
-        <Button
-          onClick={() => setIsEmailDialogOpen(true)}
-          variant="secondary"
-        >
-          <Mail className="mr-2" />
-          Email
-        </Button>
       </CardFooter>
     </Card>
-    <EmailDialog
-        isOpen={isEmailDialogOpen}
-        onClose={() => setIsEmailDialogOpen(false)}
-        onSend={handleEmailSend}
-        title={`Email Report Card for ${studentName}`}
-        description="Enter the recipient's email address. This will open your browser's share dialog or your default email client."
-     />
     </>
   );
 }
