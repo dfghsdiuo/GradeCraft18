@@ -17,6 +17,17 @@ import {
   History as HistoryIcon,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 // Custom WhatsApp Icon
 function WhatsAppIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -37,27 +48,6 @@ function WhatsAppIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
-
-const MOCK_HISTORY_DATA = [
-  {
-    id: 1,
-    fileName: 'class10_final_reports.zip',
-    date: '2024-07-28',
-    fileCount: 32,
-  },
-  {
-    id: 2,
-    fileName: 'class9_midterm_reports.zip',
-    date: '2024-05-15',
-    fileCount: 28,
-  },
-  {
-    id: 3,
-    fileName: 'class11_unit_test_1.zip',
-    date: '2024-04-02',
-    fileCount: 45,
-  },
-];
 
 interface HistoryItem {
   id: number;
@@ -83,12 +73,11 @@ export default function HistoryPage() {
         if (storedHistory) {
           setHistory(JSON.parse(storedHistory));
         } else {
-          // If no history in local storage, set the mock data
-          setHistory(MOCK_HISTORY_DATA);
+          setHistory([]);
         }
       } catch (error) {
         console.error("Failed to parse history from localStorage", error);
-        setHistory(MOCK_HISTORY_DATA);
+        setHistory([]);
       }
     }
   }, [isClient]);
@@ -111,8 +100,16 @@ export default function HistoryPage() {
     });
   };
 
+  const handleDeleteAll = () => {
+    setHistory([]);
+    toast({
+        title: "History Cleared",
+        description: "All report card generation history has been removed."
+    })
+  }
+
   const handleDownload = (fileName: string) => {
-    const blob = new Blob([`Dummy content for ${fileName}`], {
+    const blob = new Blob([`This is a dummy zip file for ${fileName}. In a real app, this would contain the generated report cards.`], {
       type: 'application/zip',
     });
     const url = URL.createObjectURL(blob);
@@ -130,17 +127,25 @@ export default function HistoryPage() {
   };
 
   const handleShare = (fileName: string) => {
-    const blob = new Blob([`Dummy content for ${fileName}`], {
-      type: 'application/zip',
-    });
-    const url = URL.createObjectURL(blob);
-    const text = `Hello, please find the report cards for ${fileName} here: ${url}`;
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-    window.open(whatsappUrl, '_blank');
-    toast({
-      title: 'WhatsApp Opened',
-      description: 'A new tab to share on WhatsApp has been opened.',
-    });
+    const text = `Hello, sharing the generated report cards for ${fileName}.`;
+    if(navigator.share) {
+        navigator.share({
+            title: 'Report Cards',
+            text: text,
+        }).then(() => {
+            toast({
+              title: 'Shared successfully!',
+            });
+        }).catch(error => {
+            console.error('Sharing failed', error)
+             // Fallback to whatsapp
+            const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+            window.open(whatsappUrl, '_blank');
+        })
+    } else {
+        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+        window.open(whatsappUrl, '_blank');
+    }
   };
   
   if (!isClient) {
@@ -149,13 +154,38 @@ export default function HistoryPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">
-          Generation History
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Review and download previously generated report card batches.
-        </p>
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            Generation History
+            </h1>
+            <p className="text-muted-foreground mt-2">
+            Review and download previously generated report card batches.
+            </p>
+        </div>
+        {history.length > 0 && (
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete All
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete all
+                        your generation history.
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteAll}>Continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        )}
       </div>
       {history.length > 0 ? (
         <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
