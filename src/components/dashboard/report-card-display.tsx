@@ -108,14 +108,14 @@ export function ReportCardDisplay({
 
   const handleShare = async () => {
     toast({
-      title: 'Preparing PNG...',
-      description: `Report card for ${studentName} is being prepared for sharing.`,
+      title: 'Preparing PNG for sharing...',
+      description: 'Please wait a moment.',
     });
     try {
       const pngBlob = await generatePngBlob();
       
       if (!pngBlob) {
-        throw new Error('Failed to create PNG blob.');
+        throw new Error('Failed to create PNG blob for sharing.');
       }
 
       const file = new File(
@@ -139,16 +139,19 @@ export function ReportCardDisplay({
         navigator.clipboard.writeText(url);
         toast({
           title: 'Link Copied!',
-          description: "A shareable link has been copied to your clipboard.",
+          description: "A shareable link to the report card image has been copied to your clipboard.",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sharing:', error);
-      toast({
-        title: 'Sharing Failed',
-        description: 'Could not share the file at this time.',
-        variant: 'destructive',
-      });
+      // Don't show a toast for user-cancelled share action
+      if (error.name !== 'AbortError') {
+        toast({
+            title: 'Sharing Failed',
+            description: error.message || 'The report card could not be shared at this time.',
+            variant: 'destructive',
+        });
+      }
     }
   };
 
@@ -160,43 +163,47 @@ export function ReportCardDisplay({
     try {
       const subject = `Report Card for ${studentName}`;
       const pngBlob = await generatePngBlob();
-      const body = `Hello,\n\nPlease find the report card for ${studentName} attached.`;
+       if (!pngBlob) {
+        throw new Error('Failed to create PNG for emailing.');
+      }
+      
+      const file = new File([pngBlob], `${studentName.replace(/\s+/g, '_')}_report_card.png`, { type: 'image/png' });
+      const shareData = {
+        title: subject,
+        text: `Here is the report card for ${studentName}.`,
+        files: [file],
+      };
 
-      if (pngBlob && navigator.share && navigator.canShare) {
-        const file = new File([pngBlob], `${studentName.replace(/\s+/g, '_')}_report_card.png`, { type: 'image/png' });
-        const shareData = {
-          title: subject,
-          text: `Here is the report card for ${studentName}.`,
-          files: [file],
-        };
-        // Using share API is a better experience as it opens native share dialog
-        if (navigator.canShare(shareData)) {
+      // The Web Share API is the best way to "send" a file from the client.
+      // It opens a native dialog to share with any compatible app, including email.
+      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
           await navigator.share(shareData);
           toast({
             title: 'Share Dialog Opened',
-            description: 'Please select an app to share the report card.',
+            description: 'Choose an application to send the report card.',
           });
-          setIsEmailDialogOpen(false);
-          return;
-        }
+      } else {
+        // Fallback to mailto link if Web Share API is not supported.
+        // This won't attach the file but will open the email client.
+        const body = `Hello,\n\nPlease find the report card for ${studentName} attached.\n\n(Note: If the file is not attached, please use the 'Share' or 'Download' button to get the file.)`;
+        const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.location.href = mailtoLink;
+        toast({
+          title: 'Email Client Opening',
+          description: 'Your default email client is opening. Please attach the report card manually if needed.',
+        });
       }
-
-      // Fallback to mailto link if share API is not supported or fails
-      const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      window.location.href = mailtoLink;
-      setIsEmailDialogOpen(false);
-      toast({
-        title: 'Email Client Opening',
-        description: 'Your email client is opening with a pre-filled draft.',
-      });
-
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error preparing email:', error);
-      toast({
-        title: 'Email Failed',
-        description: 'Could not open the email client or prepare the file.',
-        variant: 'destructive',
-      });
+      if (error.name !== 'AbortError') {
+        toast({
+          title: 'Email Failed',
+          description: 'Could not open the email client or prepare the file.',
+          variant: 'destructive',
+        });
+      }
+    } finally {
+        setIsEmailDialogOpen(false);
     }
   };
 
@@ -261,7 +268,7 @@ export function ReportCardDisplay({
         onClose={() => setIsEmailDialogOpen(false)}
         onSend={handleEmailSend}
         title={`Email Report Card for ${studentName}`}
-        description="Enter the recipient's email address. This will open your default email client or a share dialog."
+        description="Enter the recipient's email address. This will open your browser's share dialog or your default email client."
      />
     </>
   );

@@ -45,11 +45,10 @@ export function EmailDialog({
     }
 
     setIsSending(true);
-    // onSend is expected to open a mail client, not send an email directly.
-    onSend(email);
+    await onSend(email);
     setIsSending(false);
-    setEmail(''); // Reset email after triggering send
-    onClose(); // Close the dialog
+    // Don't reset email here, as onClose might not happen if share is cancelled.
+    // Let the parent component handle closing and state reset.
   };
 
   return (
