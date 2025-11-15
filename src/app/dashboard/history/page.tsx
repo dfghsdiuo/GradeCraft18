@@ -15,6 +15,9 @@ import {
   History as HistoryIcon,
   Loader2,
   Eye,
+  Share2,
+  Download,
+  Mail,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -29,6 +32,13 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { BatchDownloader } from '@/components/dashboard/batch-downloader';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { EmailDialog } from '@/components/dashboard/email-dialog';
 
 interface HistoryItem {
   id: number;
@@ -42,6 +52,7 @@ export default function HistoryPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
+  const [directDownloadItem, setDirectDownloadItem] = useState<HistoryItem | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -162,10 +173,37 @@ export default function HistoryPage() {
                       triggerButton={
                         <Button variant="outline" size="sm">
                           <Eye className="mr-2 h-4 w-4" />
-                          View & Share
+                          View
                         </Button>
                       }
+                      isModal={true}
                     />
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm">
+                          <Share2 className="mr-2 h-4 w-4" />
+                          Share
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onSelect={() => setDirectDownloadItem(item)}>
+                          <Download className="mr-2 h-4 w-4" />
+                          <span>Download All as PDF</span>
+                        </DropdownMenuItem>
+                        <EmailDialog
+                          trigger={
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <Mail className="mr-2 h-4 w-4" />
+                                <span>Email Notification</span>
+                            </DropdownMenuItem>
+                          }
+                          fileName={item.fileName}
+                          fileCount={item.fileCount}
+                        />
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="destructive" size="icon">
@@ -209,6 +247,14 @@ export default function HistoryPage() {
           </div>
         )}
       </div>
+      {directDownloadItem && (
+        <BatchDownloader
+            studentsData={directDownloadItem.studentsData}
+            fileName={directDownloadItem.fileName}
+            isModal={false}
+            onComplete={() => setDirectDownloadItem(null)}
+        />
+      )}
     </>
   );
 }

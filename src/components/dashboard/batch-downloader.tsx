@@ -9,7 +9,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Download, Loader2, Eye } from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   generateReportCards,
@@ -28,6 +28,8 @@ interface BatchDownloaderProps {
   studentsData?: any[];
   fileName: string;
   triggerButton?: React.ReactNode;
+  isModal: boolean;
+  onComplete?: () => void;
 }
 
 const BATCH_SIZE = 50; // Process 50 students per AI call
@@ -63,6 +65,8 @@ export function BatchDownloader({
   studentsData = [],
   fileName,
   triggerButton,
+  isModal,
+  onComplete,
 }: BatchDownloaderProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -80,11 +84,19 @@ export function BatchDownloader({
 
 
   useEffect(() => {
-    if (isOpen && studentsData.length > 0 && reportCards.length === 0) {
+    if ((isOpen || !isModal) && studentsData.length > 0 && reportCards.length === 0) {
       handleGenerate();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  }, [isOpen, isModal]);
+  
+  useEffect(() => {
+      if (!isModal && reportCardHtmls.length > 0 && !isGenerating) {
+        handleDownloadAll();
+      }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportCardHtmls, isModal, isGenerating]);
+
 
   const handleGenerate = async () => {
     if (isGenerating) return;
@@ -107,6 +119,7 @@ export function BatchDownloader({
           variant: 'destructive',
         });
         setIsGenerating(false);
+        if (onComplete) onComplete();
         return;
       }
 
@@ -151,10 +164,12 @@ export function BatchDownloader({
       setReportCards(allResults);
 
       if (successfulGenerations > 0 && allResults.length > 0) {
-          toast({
-              title: 'Generation Complete',
-              description: `${successfulGenerations} of ${plainStudentsData.length} report cards have been successfully generated.`,
-          });
+          if (isModal) {
+            toast({
+                title: 'Generation Complete',
+                description: `${successfulGenerations} of ${plainStudentsData.length} report cards have been successfully generated.`,
+            });
+          }
       }
 
     } catch (error: any) {
@@ -179,6 +194,7 @@ export function BatchDownloader({
         description: 'Please generate report cards first.',
         variant: 'destructive',
       });
+      if (onComplete) onComplete();
       return;
     }
 
@@ -234,8 +250,81 @@ export function BatchDownloader({
       });
     } finally {
       setIsDownloading(false);
+      if (onComplete) onComplete();
     }
   };
+
+  const content = (
+    <>
+      <DialogHeader>
+        <DialogTitle>Report Cards for "{fileName}"</DialogTitle>
+      </DialogHeader>
+
+      {isGenerating && (
+          <div className="flex flex-col items-center justify-center h-full">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              <p className="mt-4 text-muted-foreground">Generating report cards...</p>
+              <Progress value={generationProgress} className="w-full max-w-sm mt-4" />
+          </div>
+      )}
+
+      {!isGenerating && reportCardHtmls.length > 0 && (
+        <>
+          <div className="flex-none flex items-center justify-between pb-4 border-b">
+              <p className="text-sm text-muted-foreground">{reportCardHtmls.length} report cards generated.</p>
+              <Button onClick={handleDownloadAll} disabled={isDownloading}>
+              {isDownloading ? (
+                  <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Downloading...
+                  </>
+              ) : (
+                  <>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download All as PDF
+                  </>
+              )}
+              </Button>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="space-y-4 pr-6">
+              {reportCardHtmls.map((card, index) => (
+                <ReportCardDisplay
+                  key={index}
+                  htmlContent={card.reportCardHtml}
+                  studentName={card.studentName}
+                />
+              ))}
+            </div>
+          </ScrollArea>
+        </>
+      )}
+
+      {!isGenerating && reportCards.length === 0 && studentsData.length > 0 && (
+           <div className="flex flex-col items-center justify-center h-full">
+              <p className="mt-4 text-muted-foreground">Could not generate report cards.</p>
+              <Button onClick={handleGenerate} className="mt-4">Retry Generation</Button>
+          </div>
+      )}
+    </>
+  );
+
+  if (!isModal) {
+    if (isGenerating || isDownloading) {
+        return (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                <div className="bg-card p-8 rounded-lg shadow-xl flex flex-col items-center gap-4">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                    <p className="text-muted-foreground">
+                        {isGenerating ? 'Generating reports for download...' : 'Downloading PDF...'}
+                    </p>
+                    {isGenerating && <Progress value={generationProgress} className="w-full max-w-sm mt-4" />}
+                </div>
+            </div>
+        );
+    }
+    return null;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -243,57 +332,7 @@ export function BatchDownloader({
         {triggerButton || <Button>View Batch</Button>}
       </DialogTrigger>
       <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Report Cards for "{fileName}"</DialogTitle>
-        </DialogHeader>
-
-        {isGenerating && (
-            <div className="flex flex-col items-center justify-center h-full">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="mt-4 text-muted-foreground">Generating report cards...</p>
-                <Progress value={generationProgress} className="w-full max-w-sm mt-4" />
-            </div>
-        )}
-
-        {!isGenerating && reportCardHtmls.length > 0 && (
-          <>
-            <div className="flex-none flex items-center justify-between pb-4 border-b">
-                <p className="text-sm text-muted-foreground">{reportCardHtmls.length} report cards generated.</p>
-                <Button onClick={handleDownloadAll} disabled={isDownloading}>
-                {isDownloading ? (
-                    <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Downloading...
-                    </>
-                ) : (
-                    <>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download All as PDF
-                    </>
-                )}
-                </Button>
-            </div>
-            <ScrollArea className="flex-1">
-              <div className="space-y-4 pr-6">
-                {reportCardHtmls.map((card, index) => (
-                  <ReportCardDisplay
-                    key={index}
-                    htmlContent={card.reportCardHtml}
-                    studentName={card.studentName}
-                  />
-                ))}
-              </div>
-            </ScrollArea>
-          </>
-        )}
-
-        {!isGenerating && reportCards.length === 0 && studentsData.length > 0 && (
-             <div className="flex flex-col items-center justify-center h-full">
-                <p className="mt-4 text-muted-foreground">Could not generate report cards.</p>
-                <Button onClick={handleGenerate} className="mt-4">Retry Generation</Button>
-            </div>
-        )}
-
+        {content}
       </DialogContent>
     </Dialog>
   );
