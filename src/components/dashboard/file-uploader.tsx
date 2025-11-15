@@ -42,40 +42,6 @@ export function FileUploader() {
     setIsClient(true);
   }, []);
 
-  useEffect(() => {
-    if (isClient) {
-      try {
-        const storedReportCards = localStorage.getItem('generatedReportCards');
-        const storedFileName = localStorage.getItem('lastUploadedFileName');
-        if (storedReportCards && storedFileName) {
-          setReportCards(JSON.parse(storedReportCards));
-          setFileName(storedFileName);
-          // Note: The 'file' object itself cannot be restored from localStorage
-        }
-      } catch (error) {
-        console.error('Failed to parse report cards from localStorage', error);
-        setReportCards([]);
-        setFileName(null);
-      }
-    }
-  }, [isClient]);
-
-  useEffect(() => {
-    if (isClient) {
-      try {
-        if (reportCards.length > 0 && fileName) {
-            localStorage.setItem('generatedReportCards', JSON.stringify(reportCards));
-            localStorage.setItem('lastUploadedFileName', fileName);
-        } else {
-            localStorage.removeItem('generatedReportCards');
-            localStorage.removeItem('lastUploadedFileName');
-        }
-      } catch (error) {
-        console.error('Failed to save report cards to localStorage', error);
-      }
-    }
-  }, [reportCards, fileName, isClient]);
-
   const handleSetFile = (selectedFile: File | null) => {
     if (selectedFile) {
         if (
@@ -85,10 +51,6 @@ export function FileUploader() {
             setFile(selectedFile);
             setFileName(selectedFile.name);
             setReportCards([]); // Clear previous results when new file is selected
-            if (isClient) {
-                localStorage.removeItem('generatedReportCards');
-                localStorage.removeItem('lastUploadedFileName');
-            }
         } else {
             toast({
                 title: 'Invalid File Type',
@@ -136,6 +98,7 @@ export function FileUploader() {
     name: string,
     fileCount: number
   ) => {
+    if (!isClient) return;
     try {
       const storedHistory = localStorage.getItem('reportCardHistory');
       const history: HistoryItem[] = storedHistory ? JSON.parse(storedHistory) : [];
@@ -335,6 +298,3 @@ export function FileUploader() {
     </div>
   );
 }
-
-    
-    
