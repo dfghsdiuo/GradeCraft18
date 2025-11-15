@@ -48,13 +48,15 @@ export default function DashboardLayout({
             </p>
           </div>
         </div>
-        <Button variant="outline" onClick={handleSignOut}>
-          <LogOut className="mr-2 h-4 w-4" /> Sign Out
-        </Button>
       </header>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <DashboardNav />
         <div className="flex-1">{children}</div>
+        <footer className="flex justify-end mt-auto pt-4">
+            <Button variant="outline" onClick={handleSignOut}>
+                <LogOut className="mr-2 h-4 w-4" /> Sign Out
+            </Button>
+        </footer>
       </main>
     </div>
   );
