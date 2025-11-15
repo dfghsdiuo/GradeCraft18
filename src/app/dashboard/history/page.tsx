@@ -15,7 +15,6 @@ import {
   History as HistoryIcon,
   Loader2,
   Eye,
-  Share2,
   Download,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -31,12 +30,6 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { BatchDownloader } from '@/components/dashboard/batch-downloader';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 interface HistoryItem {
   id: number;
@@ -177,20 +170,10 @@ export default function HistoryPage() {
                       isModal={true}
                     />
 
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="sm">
-                          <Share2 className="mr-2 h-4 w-4" />
-                          Share
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => setDirectDownloadItem(item)}>
-                          <Download className="mr-2 h-4 w-4" />
-                          <span>Download All as PDF</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Button size="sm" onClick={() => setDirectDownloadItem(item)}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download All as PDF
+                    </Button>
 
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
