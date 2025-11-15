@@ -46,29 +46,37 @@ export function ReportCardDisplay({
   };
 
   const handleShare = async () => {
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const file = new File(
+      [blob],
+      `${studentName.replace(/\s+/g, '_')}_report_card.html`,
+      { type: 'text/html' }
+    );
+
+    const shareData = {
+        files: [file],
+        title: `Report Card for ${studentName}`,
+        text: `Here is the report card for ${studentName}.`,
+    };
+
     try {
-      const blob = new Blob([htmlContent], { type: 'text/html' });
-      const file = new File(
-        [blob],
-        `${studentName.replace(/\s+/g, '_')}_report_card.html`,
-        { type: 'text/html' }
-      );
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: `Report Card for ${studentName}`,
-          text: `Here is the report card for ${studentName}.`,
-        });
+      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
         toast({ title: 'Shared successfully!' });
       } else {
-        throw new Error('Web Share API not supported for files.');
+        // Fallback for browsers that don't support file sharing
+        const url = URL.createObjectURL(blob);
+        navigator.clipboard.writeText(url);
+        toast({
+          title: 'Link Copied!',
+          description: "A shareable link has been copied to your clipboard.",
+        });
       }
     } catch (error) {
       console.error('Error sharing:', error);
       toast({
         title: 'Sharing Failed',
-        description:
-          'Your browser does not support sharing files. Try downloading it first.',
+        description: 'Could not share the file at this time.',
         variant: 'destructive',
       });
     }
