@@ -50,7 +50,7 @@ export function FileUploader() {
         ) {
             setFile(selectedFile);
             setFileName(selectedFile.name);
-            setReportCards([]); // Clear previous results when new file is selected
+            setReportCards([]);
         } else {
             toast({
                 title: 'Invalid File Type',
@@ -167,7 +167,6 @@ export function FileUploader() {
             if (result && result.results) {
               const batchResults = result.results.map(res => {
                   const studentName = res.studentData.Name || 'Unknown Student';
-                  // The AI now returns a JSON string for subjects, so we need to parse it.
                   const subjects: Subject[] = JSON.parse(res.subjects || '[]');
                   const reportCardHtml = generateReportCardHtml({...res, subjects});
                   return { studentName, reportCardHtml };
@@ -209,6 +208,7 @@ export function FileUploader() {
 
   const clearFile = () => {
     handleSetFile(null);
+    setReportCards([]);
     setGenerationProgress(0);
   };
 
