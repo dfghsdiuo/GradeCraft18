@@ -6,7 +6,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Share2, FileText } from 'lucide-react';
+import { Download, Share2, FileText, Trash2, History as HistoryIcon } from 'lucide-react';
 
 const MOCK_HISTORY = [
   {
@@ -65,6 +65,9 @@ export default function HistoryPage() {
                   <Button variant="ghost" size="icon">
                     <Share2 className="h-4 w-4" />
                   </Button>
+                   <Button variant="destructive" size="icon">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -72,7 +75,7 @@ export default function HistoryPage() {
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed bg-card p-12 text-center">
-          <History className="h-12 w-12 text-muted-foreground" />
+          <HistoryIcon className="h-12 w-12 text-muted-foreground" />
           <h3 className="mt-4 text-lg font-semibold text-foreground">
             No History Found
           </h3>
