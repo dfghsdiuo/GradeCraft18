@@ -152,41 +152,38 @@ export function FileUploader() {
         return;
       }
       
-      // Simulate progress for batch processing
-      const progressInterval = setInterval(() => {
-        setGenerationProgress(prev => {
-          if (prev >= 95) {
-            clearInterval(progressInterval);
-            return 95;
-          }
-          return prev + 5;
-        });
-      }, 500);
+      const allResults: ReportCardInfo[] = [];
+      let successfulGenerations = 0;
 
-      const result: ReportCardsOutput = await generateReportCards({ studentsData: plainStudentsData });
-      
-      clearInterval(progressInterval);
-      setGenerationProgress(100);
+      for (let i = 0; i < plainStudentsData.length; i++) {
+        const studentData = plainStudentsData[i];
+        try {
+            const result: ReportCardsOutput = await generateReportCards({ studentsData: [studentData] });
 
-      if (result && result.results) {
-        const generatedCards = result.results.map(res => {
-          const studentName = res.studentData.Name || 'Unknown Student';
-          const reportCardHtml = generateReportCardHtml(res);
-          return { studentName, reportCardHtml };
-        });
-
-        setReportCards(generatedCards);
-
-        if (generatedCards.length > 0) {
-          saveToHistory(file.name, generatedCards.length);
+            if (result && result.results && result.results.length > 0) {
+              const res = result.results[0];
+              const studentName = res.studentData.Name || 'Unknown Student';
+              const reportCardHtml = generateReportCardHtml(res);
+              allResults.push({ studentName, reportCardHtml });
+              successfulGenerations++;
+            }
+        } catch (error) {
+            console.error(`Error generating report card for student:`, studentData, error);
         }
-        toast({
-          title: 'Generation Complete',
-          description: `${generatedCards.length} of ${plainStudentsData.length} report cards have been successfully generated.`,
-        });
-      } else {
-        throw new Error("AI did not return the expected report card data.");
+        setGenerationProgress(((i + 1) / plainStudentsData.length) * 100);
       }
+      
+      setReportCards(allResults);
+
+      if (successfulGenerations > 0) {
+        saveToHistory(file.name, successfulGenerations);
+      }
+
+      toast({
+        title: 'Generation Complete',
+        description: `${successfulGenerations} of ${plainStudentsData.length} report cards have been successfully generated.`,
+      });
+
 
     } catch (error) {
       console.error('Error generating report cards:', error);
