@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { UploadCloud, File, X, Loader2 } from 'lucide-react';
+import { UploadCloud, File, X, Loader2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
@@ -10,12 +10,14 @@ import {
   ReportCardOutput,
 } from '@/ai/flows/report-card-flow';
 import { ReportCardDisplay } from './report-card-display';
+import { Progress } from '@/components/ui/progress';
 
 export function FileUploader() {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [reportCard, setReportCard] = useState<ReportCardOutput | null>(null);
+  const [reportCards, setReportCards] = useState<ReportCardOutput[]>([]);
+  const [generationProgress, setGenerationProgress] = useState(0);
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,7 +28,7 @@ export function FileUploader() {
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       ) {
         setFile(selectedFile);
-        setReportCard(null);
+        setReportCards([]);
       } else {
         toast({
           title: 'Invalid File Type',
@@ -63,7 +65,7 @@ export function FileUploader() {
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       ) {
         setFile(droppedFile);
-        setReportCard(null);
+        setReportCards([]);
       } else {
         toast({
           title: 'Invalid File Type',
@@ -85,10 +87,12 @@ export function FileUploader() {
     }
 
     setIsGenerating(true);
-    setReportCard(null);
+    setReportCards([]);
+    setGenerationProgress(0);
     toast({
       title: 'Generation Started',
-      description: 'Your report cards are being generated. This may take a moment.',
+      description:
+        'Your report cards are being generated. This may take a moment.',
     });
 
     try {
@@ -96,9 +100,9 @@ export function FileUploader() {
       const workbook = XLSX.read(data);
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      const json = XLSX.utils.sheet_to_json(worksheet);
+      const students = XLSX.utils.sheet_to_json(worksheet) as Record<string, any>[];
 
-      if (json.length === 0) {
+      if (students.length === 0) {
         toast({
           title: 'Empty File',
           description: 'The selected file contains no student data.',
@@ -107,35 +111,47 @@ export function FileUploader() {
         setIsGenerating(false);
         return;
       }
-      
-      // For simplicity, we'll just use the first student's data.
-      // In a real app, you might loop through all students.
-      const studentData = json[0];
 
-      const result = await generateReportCard({ studentData: JSON.stringify(studentData) });
-      setReportCard(result);
+      const generated: ReportCardOutput[] = [];
+      for (let i = 0; i < students.length; i++) {
+        const studentData = students[i];
+        try {
+          const result = await generateReportCard({
+            studentData: JSON.stringify(studentData),
+          });
+          generated.push(result);
+          setReportCards([...generated]); // Update state incrementally
+        } catch (error) {
+           console.error(`Error generating report card for student ${i + 1}:`, studentData, error);
+           // Optionally, show a toast for the failed student
+        }
+        setGenerationProgress(((i + 1) / students.length) * 100);
+      }
+      
+      setReportCards(generated);
+
       toast({
         title: 'Generation Complete',
-        description: 'The report card has been successfully generated.',
+        description: `${generated.length} of ${students.length} report cards have been successfully generated.`,
       });
     } catch (error) {
-      console.error('Error generating report card:', error);
+      console.error('Error generating report cards:', error);
       toast({
         title: 'Generation Failed',
         description:
-          'An error occurred while generating the report card. Please try again.',
+          'An error occurred while generating the report cards. Please check the file and try again.',
         variant: 'destructive',
       });
     } finally {
       setIsGenerating(false);
     }
   };
-  
+
   const clearFile = () => {
     setFile(null);
-    setReportCard(null);
-  }
-
+    setReportCards([]);
+    setGenerationProgress(0);
+  };
 
   return (
     <div className="flex w-full flex-col items-center gap-6">
@@ -194,13 +210,28 @@ export function FileUploader() {
             Generating...
           </>
         ) : (
-          'Generate Report Cards'
+          <>
+            <Users className="mr-2 h-6 w-6" />
+            Generate Report Cards
+          </>
         )}
       </Button>
-      {reportCard && (
-        <div className="mt-8 w-full max-w-4xl">
-           <h2 className="text-2xl font-bold tracking-tight text-foreground mb-4">Generated Report Card</h2>
-          <ReportCardDisplay htmlContent={reportCard.reportCardHtml} />
+
+      {isGenerating && (
+        <div className="w-full max-w-2xl text-center">
+            <Progress value={generationProgress} className="w-full" />
+            <p className="text-sm text-muted-foreground mt-2">Generating {Math.round(generationProgress)}%</p>
+        </div>
+      )}
+
+      {reportCards.length > 0 && (
+        <div className="mt-8 w-full max-w-4xl space-y-8">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground text-center">
+            Generated Report Cards ({reportCards.length})
+          </h2>
+          {reportCards.map((card, index) => (
+            <ReportCardDisplay key={index} htmlContent={card.reportCardHtml} />
+          ))}
         </div>
       )}
     </div>
