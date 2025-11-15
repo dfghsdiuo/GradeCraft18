@@ -10,7 +10,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-const StudentSchema = z.record(z.any()).describe('An object representing a single student\'s data.');
+const StudentSchema = z.record(z.any()).describe('An object representing a single student\'s data, including subjects and marks.');
 
 const ReportCardsInputSchema = z.object({
   studentsData: z
@@ -19,17 +19,19 @@ const ReportCardsInputSchema = z.object({
 });
 export type ReportCardsInput = z.infer<typeof ReportCardsInputSchema>;
 
-const ReportCardSchema = z.object({
-  reportCardHtml: z
-    .string()
-    .describe('The generated report card in HTML format.'),
-  studentName: z
-    .string()
-    .describe('The name of the student for this report card.'),
+const StudentResultSchema = z.object({
+  studentData: StudentSchema.describe("The original student data object."),
+  totalMarks: z.number().describe('The calculated total marks obtained by the student.'),
+  percentage: z.number().describe('The calculated overall percentage.'),
+  grade: z.string().describe('The calculated overall grade.'),
+  subjects: z.array(z.object({
+    name: z.string(),
+    marks: z.number(),
+  })).describe("An array of subjects and marks for the student.")
 });
 
 const ReportCardsOutputSchema = z.object({
-  reportCards: z.array(ReportCardSchema),
+  results: z.array(StudentResultSchema),
 });
 export type ReportCardsOutput = z.infer<typeof ReportCardsOutputSchema>;
 
@@ -43,13 +45,17 @@ const prompt = ai.definePrompt({
   name: 'reportCardPrompt',
   input: { schema: ReportCardsInputSchema },
   output: { schema: ReportCardsOutputSchema },
-  prompt: `You are an expert in creating student report cards.
+  prompt: `You are an expert in processing student data.
 You will be given an array of student data objects in JSON format.
-Your task is to generate a well-formatted and professional HTML report card for EACH student in the array.
-For each report card, identify the student's name from their data.
-The report card should be visually appealing. Use Tailwind CSS classes for styling.
-Do not include \`<html>\` or \`<body>\` tags in the reportCardHtml.
-Return an array of objects, where each object contains the 'reportCardHtml' and the 'studentName'.
+Your task is to process EACH student's data and calculate the following:
+1.  Identify all numeric subject marks.
+2.  Calculate the 'Total Obtained' marks by summing up all subject marks.
+3.  Assume 'Total Marks' are 100 for each subject unless specified otherwise.
+4.  Calculate the 'Percentage' based on the total obtained and total possible marks.
+5.  Determine the 'Grade' based on the percentage (e.g., A, B, C, F).
+6.  List the subjects and their marks.
+
+Return an array of objects, where each object contains the original student data, and the calculated 'totalMarks', 'percentage', 'grade', and a list of 'subjects'.
 
 Student Data:
 {{{json studentsData}}}

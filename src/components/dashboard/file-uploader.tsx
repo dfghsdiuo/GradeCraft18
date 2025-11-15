@@ -11,6 +11,7 @@ import {
 } from '@/ai/flows/report-card-flow';
 import { ReportCardDisplay } from './report-card-display';
 import { Progress } from '@/components/ui/progress';
+import { generateReportCardHtml } from './report-card-template';
 
 interface HistoryItem {
   id: number;
@@ -162,19 +163,26 @@ export function FileUploader() {
         });
       }, 500);
 
-      const result = await generateReportCards({ studentsData: plainStudentsData });
+      const result: ReportCardsOutput = await generateReportCards({ studentsData: plainStudentsData });
       
       clearInterval(progressInterval);
       setGenerationProgress(100);
 
-      if (result && result.reportCards) {
-        setReportCards(result.reportCards);
-        if (result.reportCards.length > 0) {
-          saveToHistory(file.name, result.reportCards.length);
+      if (result && result.results) {
+        const generatedCards = result.results.map(res => {
+          const studentName = res.studentData.Name || 'Unknown Student';
+          const reportCardHtml = generateReportCardHtml(res);
+          return { studentName, reportCardHtml };
+        });
+
+        setReportCards(generatedCards);
+
+        if (generatedCards.length > 0) {
+          saveToHistory(file.name, generatedCards.length);
         }
         toast({
           title: 'Generation Complete',
-          description: `${result.reportCards.length} of ${plainStudentsData.length} report cards have been successfully generated.`,
+          description: `${generatedCards.length} of ${plainStudentsData.length} report cards have been successfully generated.`,
         });
       } else {
         throw new Error("AI did not return the expected report card data.");
