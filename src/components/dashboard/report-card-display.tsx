@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Share2, Eye, Loader2 } from 'lucide-react';
+import { Download, Share2, Eye, Loader2, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -19,8 +19,14 @@ import {
 } from '@/components/ui/dialog';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { ScrollArea } from '../ui/scroll-area';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface ReportCardDisplayProps {
   htmlContent: string;
@@ -35,25 +41,24 @@ export function ReportCardDisplay({
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
 
-  const getCanvas = async () => {
+  const getCanvas = useCallback(async () => {
     const reportElement = document.createElement('div');
     reportElement.innerHTML = htmlContent;
-    // Append to body to ensure styles are applied, but make it invisible
     reportElement.style.position = 'absolute';
     reportElement.style.left = '-9999px';
     reportElement.style.width = '210mm'; // A4 width
     document.body.appendChild(reportElement);
 
     const canvas = await html2canvas(reportElement, {
-      scale: 2, // Higher scale for better quality
+      scale: 1.5, // Optimized scale
       useCORS: true,
     });
     
     document.body.removeChild(reportElement);
     return canvas;
-  }
+  }, [htmlContent]);
 
-  const generatePdf = async () => {
+  const generatePdf = useCallback(async () => {
     const canvas = await getCanvas();
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF({
@@ -71,9 +76,9 @@ export function ReportCardDisplay({
 
     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, Math.min(height, pdfHeight));
     return pdf;
-  };
+  }, [getCanvas]);
 
-  const handleDownload = async () => {
+  const handleDownload = useCallback(async () => {
     setIsDownloading(true);
     toast({
       title: 'Generating PDF...',
@@ -96,12 +101,12 @@ export function ReportCardDisplay({
     } finally {
       setIsDownloading(false);
     }
-  };
+  }, [generatePdf, studentName, toast]);
 
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     setIsSharing(true);
     toast({
-      title: 'Preparing PDF for sharing...',
+      title: 'Preparing to share...',
       description: 'Please wait a moment.',
     });
     try {
@@ -125,25 +130,23 @@ export function ReportCardDisplay({
         toast({ title: 'Shared successfully!' });
       } else {
         toast({
-          title: 'Sharing Not Supported',
-          description: "Your browser doesn't support direct file sharing. You can download the PDF and share it manually.",
+          title: 'Web Share Not Supported',
+          description: "Your browser doesn't support direct file sharing. Try downloading instead.",
           variant: 'destructive',
         });
       }
     } catch (error: any) {
-      console.error('Error sharing:', error);
-      // Don't show a toast for user-cancelled share action
-      if (error.name !== 'AbortError') {
+      if (error.name !== 'AbortError') { // Don't show toast if user cancels share
         toast({
             title: 'Sharing Failed',
-            description: error.message || 'The report card could not be shared at this time.',
+            description: error.message || 'The report card could not be shared.',
             variant: 'destructive',
         });
       }
     } finally {
       setIsSharing(false);
     }
-  };
+  }, [generatePdf, studentName, toast]);
 
   return (
     <>
@@ -185,14 +188,24 @@ export function ReportCardDisplay({
           )}
           PDF
         </Button>
-        <Button onClick={handleShare} disabled={isSharing} size="sm">
-            {isSharing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-                <Share2 className="mr-2 h-4 w-4" />
-            )}
-            Share
-        </Button>
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button disabled={isSharing} size="sm">
+                    {isSharing ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                        <Share2 className="mr-2 h-4 w-4" />
+                    )}
+                    Share
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+                <DropdownMenuItem onClick={handleShare}>
+                    <Share2 className="mr-2 h-4 w-4" />
+                    <span>Share File</span>
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
       </CardFooter>
     </Card>
     </>

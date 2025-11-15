@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -23,8 +23,8 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { GradeRule, UserSettings } from './settings-form';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useFirestore, useUser } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface BatchDownloaderProps {
   studentsData?: any[];
@@ -78,32 +78,19 @@ export function BatchDownloader({
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user } = useUser();
-  const [userSettings, setUserSettings] = useState<UserSettings | undefined>();
+  const settingsDocRef = useMemoFirebase(() => (user ? doc(firestore, 'user_settings', user.uid) : null), [firestore, user]);
+  const { data: userSettings } = useDoc<UserSettings>(settingsDocRef);
+
 
   const reportCardHtmls = useMemo(() => {
     return reportCards.map((res) => ({
       studentName: res.studentData.Name || 'Unknown Student',
-      reportCardHtml: generateReportCardHtml(res, userSettings),
+      reportCardHtml: generateReportCardHtml(res, userSettings || undefined),
     }));
   }, [reportCards, userSettings]);
 
 
-  useEffect(() => {
-    if ((isOpen || !isModal) && studentsData.length > 0 && reportCards.length === 0) {
-      handleGenerate();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, isModal]);
-  
-  useEffect(() => {
-      if (!isModal && reportCardHtmls.length > 0 && !isGenerating) {
-        handleDownloadAll();
-      }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reportCardHtmls, isModal, isGenerating]);
-
-
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async () => {
     if (isGenerating || !user) return;
 
     setIsGenerating(true);
@@ -128,14 +115,16 @@ export function BatchDownloader({
         return;
       }
 
-      // Fetch user settings for grade rules
-      let gradeRules: GradeRule[] | undefined = undefined;
-      const settingsDoc = await import('firebase/firestore').then(m => m.getDoc(doc(firestore, 'user_settings', user.uid)));
-      if (settingsDoc.exists()) {
-          const settings = settingsDoc.data() as UserSettings;
-          setUserSettings(settings);
-          gradeRules = settings.gradeRules;
+      // Re-fetch settings just in case, especially for non-modal direct downloads
+      let currentSettings = userSettings;
+      if (!currentSettings && settingsDocRef) {
+        const settingsDoc = await getDoc(settingsDocRef);
+        if (settingsDoc.exists()) {
+            currentSettings = settingsDoc.data() as UserSettings;
+        }
       }
+      
+      const gradeRules = currentSettings?.gradeRules;
 
       const allResults: StudentResult[] = [];
       let successfulGenerations = 0;
@@ -187,9 +176,16 @@ export function BatchDownloader({
       setIsGenerating(false);
       setTimeout(() => setGenerationProgress(0), 2000);
     }
-  };
-
-  const handleDownloadAll = async () => {
+  }, [isGenerating, user, studentsData, toast, onComplete, isModal, settingsDocRef, userSettings]);
+  
+  useEffect(() => {
+    if ((isOpen || !isModal) && studentsData.length > 0 && reportCards.length === 0) {
+      handleGenerate();
+    }
+  }, [isOpen, isModal, studentsData, reportCards, handleGenerate]);
+  
+  
+  const handleDownloadAll = useCallback(async () => {
     if (reportCardHtmls.length === 0) {
       toast({
         title: 'No Report Cards',
@@ -254,7 +250,14 @@ export function BatchDownloader({
       setIsDownloading(false);
       if (onComplete) onComplete();
     }
-  };
+  }, [reportCardHtmls, fileName, onComplete, toast]);
+
+  useEffect(() => {
+      if (!isModal && reportCardHtmls.length > 0 && !isGenerating) {
+        handleDownloadAll();
+      }
+  }, [reportCardHtmls, isModal, isGenerating, handleDownloadAll]);
+
 
   const content = (
     <>

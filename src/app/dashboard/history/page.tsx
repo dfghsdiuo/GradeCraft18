@@ -31,7 +31,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { BatchDownloader } from '@/components/dashboard/batch-downloader';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, deleteDoc, doc, query, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, query, where, writeBatch } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 interface HistoryItem {
   id: string; // Firestore document ID
@@ -56,42 +58,48 @@ export default function HistoryPage() {
 
   const [directDownloadItem, setDirectDownloadItem] = useState<HistoryItem | null>(null);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!user) return;
     const docRef = doc(firestore, 'report_card_history', id);
-    try {
-      await deleteDoc(docRef);
-      toast({
-        title: 'Deleted',
-        description: 'The history item has been removed.',
+    deleteDoc(docRef)
+      .then(() => {
+        toast({
+          title: 'Deleted',
+          description: 'The history item has been removed.',
+        });
+      })
+      .catch((serverError) => {
+        const contextualError = new FirestorePermissionError({
+            operation: 'delete',
+            path: docRef.path
+        });
+        errorEmitter.emit('permission-error', contextualError);
+        toast({
+          title: 'Delete failed',
+          description: contextualError.message || 'Could not delete history item.',
+          variant: 'destructive',
+        });
       });
-    } catch (error: any) {
-      console.error("Error deleting history item:", error);
-      toast({
-        title: 'Delete failed',
-        description: error.message || 'Could not delete history item.',
-        variant: 'destructive',
-      });
-    }
   };
 
   const handleDeleteAll = async () => {
-    if (!user || !userHistory) return;
+    if (!user || !userHistory || userHistory.length === 0) return;
     toast({
       title: 'Deleting history...',
       description: 'Please wait while all items are removed.',
     });
     try {
-      for (const item of userHistory) {
+      const batch = writeBatch(firestore);
+      userHistory.forEach(item => {
         const docRef = doc(firestore, 'report_card_history', item.id);
-        await deleteDoc(docRef);
-      }
+        batch.delete(docRef);
+      });
+      await batch.commit();
       toast({
         title: 'History Cleared',
         description: 'All report card generation history has been removed.',
       });
     } catch (error: any) {
-       console.error("Error deleting all history items:", error);
       toast({
         title: 'Delete failed',
         description: error.message || 'Could not clear history.',

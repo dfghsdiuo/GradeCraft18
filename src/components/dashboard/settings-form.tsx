@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -15,6 +15,8 @@ import React from 'react';
 import { GradeRulesForm, GradeRule } from './grade-rules-form';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const themeColors = [
   { name: 'Blue', value: 'blue', className: 'bg-blue-500' },
@@ -43,7 +45,7 @@ function ImageUploader({
 }) {
   const { toast } = useToast();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.type.startsWith('image/')) {
@@ -62,7 +64,7 @@ function ImageUploader({
         });
       }
     }
-  };
+  }, [onValueChange, label, toast]);
 
   return (
     <div className="space-y-2">
@@ -160,16 +162,16 @@ export function SettingsForm() {
     }
   }, [settingsData, isLoadingSettings]);
 
-  const handleValueChange = (key: keyof UserSettings, value: any) => {
+  const handleValueChange = useCallback((key: keyof UserSettings, value: any) => {
     setLocalSettings(prev => (prev ? { ...prev, [key]: value } : null));
-  };
+  }, []);
   
-  const handleGradeRulesChange = (newRules: GradeRule[]) => {
+  const handleGradeRulesChange = useCallback((newRules: GradeRule[]) => {
     handleValueChange('gradeRules', newRules);
-  };
+  }, [handleValueChange]);
 
   const handleSave = async () => {
-    if (!user || !localSettings) {
+    if (!user || !localSettings || !settingsDocRef) {
       toast({
         title: 'Error',
         description: 'You must be logged in to save settings.',
@@ -180,23 +182,33 @@ export function SettingsForm() {
     
     setIsSaving(true);
     
-    try {
-      await setDoc(settingsDocRef!, localSettings, { merge: true });
-      toast({
-        title: 'Settings Saved',
-        description: 'Your changes have been saved successfully.',
+    setDoc(settingsDocRef, localSettings, { merge: true })
+      .then(() => {
+        toast({
+          title: 'Settings Saved',
+          description: 'Your changes have been saved successfully.',
+        });
+      })
+      .catch((serverError) => {
+        const contextualError = new FirestorePermissionError({
+            operation: 'write',
+            path: settingsDocRef.path,
+            requestResourceData: localSettings,
+        });
+        errorEmitter.emit('permission-error', contextualError);
+        toast({
+          title: 'Save Failed',
+          description: contextualError.message || 'Could not save settings.',
+          variant: 'destructive',
+        });
+      })
+      .finally(() => {
+        setIsSaving(false);
       });
-    } catch (error: any) {
-      console.error('Error saving settings: ', error);
-      toast({
-        title: 'Save Failed',
-        description: error.message || 'Could not save settings.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSaving(false);
-    }
   };
+  
+  const memoizedHandleValueChange = useCallback(handleValueChange, [handleValueChange]);
+
 
   if (isLoadingSettings || !localSettings) {
     return (
@@ -217,7 +229,7 @@ export function SettingsForm() {
                 id="school-name"
                 placeholder="e.g., Springfield High"
                 value={localSettings.schoolName}
-                onChange={(e) => handleValueChange('schoolName', e.target.value)}
+                onChange={(e) => memoizedHandleValueChange('schoolName', e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -226,7 +238,7 @@ export function SettingsForm() {
                 id="session-year"
                 placeholder="e.g., 2024-2025"
                 value={localSettings.sessionYear}
-                onChange={(e) => handleValueChange('sessionYear', e.target.value)}
+                onChange={(e) => memoizedHandleValueChange('sessionYear', e.target.value)}
               />
             </div>
           </div>
@@ -235,7 +247,7 @@ export function SettingsForm() {
             <Label>Theme Color</Label>
             <RadioGroup
               value={localSettings.themeColor}
-              onValueChange={(value) => handleValueChange('themeColor', value)}
+              onValueChange={(value) => memoizedHandleValueChange('themeColor', value)}
               className="flex items-center gap-4"
             >
               {themeColors.map((color) => (
@@ -271,22 +283,21 @@ export function SettingsForm() {
               description="PNG with transparent background recommended."
               storageKey="schoolLogo"
               currentValue={localSettings.schoolLogo}
-              onValueChange={(value) => handleValueChange('schoolLogo', value)}
+              onValueChange={(value) => memoizedHandleValueChange('schoolLogo', value)}
             />
             <ImageUploader
               label="Class Teacher's Signature"
               description="Upload a clear signature."
               storageKey="teacherSignature"
               currentValue={localSettings.teacherSignature}
-              onValuecha
-nge={(value) => handleValueChange('teacherSignature', value)}
+              onValueChange={(value) => memoizedHandleValueChange('teacherSignature', value)}
             />
             <ImageUploader
               label="Principal's Signature"
               description="Upload a clear signature."
               storageKey="principalSignature"
               currentValue={localSettings.principalSignature}
-              onValueChange={(value) => handleValueChange('principalSignature', value)}
+              onValueChange={(value) => memoizedHandleValueChange('principalSignature', value)}
             />
           </div>
         </CardContent>
