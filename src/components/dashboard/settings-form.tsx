@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -9,10 +9,12 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Check, Save } from 'lucide-react';
+import { Check, Save, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import React from 'react';
-import { GradeRulesForm } from './grade-rules-form';
+import { GradeRulesForm, GradeRule } from './grade-rules-form';
+import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 const themeColors = [
   { name: 'Blue', value: 'blue', className: 'bg-blue-500' },
@@ -29,21 +31,17 @@ const schoolLogoPlaceholder = PlaceHolderImages.find(
 function ImageUploader({
   label,
   description,
+  currentValue,
+  onValueChange,
   storageKey,
 }: {
   label: string;
   description: string;
+  currentValue: string | null;
+  onValueChange: (value: string) => void;
   storageKey: string;
 }) {
-  const [image, setImage] = useState<string | null>(null);
   const { toast } = useToast();
-
-  useEffect(() => {
-    const storedImage = localStorage.getItem(storageKey);
-    if (storedImage) {
-      setImage(storedImage);
-    }
-  }, [storageKey]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -52,9 +50,8 @@ function ImageUploader({
         const reader = new FileReader();
         reader.onloadend = () => {
           const result = reader.result as string;
-          setImage(result);
-          localStorage.setItem(storageKey, result);
-          toast({ title: `${label} updated successfully!` });
+          onValueChange(result);
+          toast({ title: `${label} ready to be saved.` });
         };
         reader.readAsDataURL(file);
       } else {
@@ -72,9 +69,9 @@ function ImageUploader({
       <Label>{label}</Label>
       <div className="flex items-center gap-4">
         <div className="relative h-24 w-24 rounded-lg border bg-card p-2">
-          {image ? (
+          {currentValue ? (
             <Image
-              src={image}
+              src={currentValue}
               alt={`${label} preview`}
               fill
               className="object-contain rounded-md"
@@ -113,29 +110,101 @@ function ImageUploader({
   );
 }
 
+export type UserSettings = {
+    schoolName: string;
+    sessionYear: string;
+    themeColor: string;
+    schoolLogo: string | null;
+    teacherSignature: string | null;
+    principalSignature: string | null;
+    gradeRules: GradeRule[];
+};
+
+const defaultSettings: UserSettings = {
+    schoolName: 'Springfield High',
+    sessionYear: '2024-2025',
+    themeColor: 'blue',
+    schoolLogo: null,
+    teacherSignature: null,
+    principalSignature: null,
+    gradeRules: [
+        { id: '1', grade: 'A+', minPercentage: 90 },
+        { id: '2', grade: 'A', minPercentage: 80 },
+        { id: '3', grade: 'B', minPercentage: 70 },
+        { id: '4', grade: 'C', minPercentage: 60 },
+        { id: '5', grade: 'D', minPercentage: 50 },
+        { id: '6', grade: 'F', minPercentage: 0 },
+    ],
+};
+
+
 export function SettingsForm() {
-  const [themeColor, setThemeColor] = useState('blue');
-  const [schoolName, setSchoolName] = useState('');
-  const [sessionYear, setSessionYear] = useState('');
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const { user } = useUser();
+
+  const settingsDocRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'user_settings', user.uid) : null),
+    [firestore, user]
+  );
+
+  const { data: settingsData, isLoading: isLoadingSettings } = useDoc<UserSettings>(settingsDocRef);
+  const [localSettings, setLocalSettings] = useState<UserSettings | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    setThemeColor(localStorage.getItem('themeColor') || 'blue');
-    setSchoolName(localStorage.getItem('schoolName') || 'Springfield High');
-    setSessionYear(localStorage.getItem('sessionYear') || '2024-2025');
-  }, []);
+    if (settingsData) {
+      setLocalSettings(settingsData);
+    } else if (!isLoadingSettings) {
+      setLocalSettings(defaultSettings);
+    }
+  }, [settingsData, isLoadingSettings]);
 
-  const handleSave = () => {
-    localStorage.setItem('schoolName', schoolName);
-    localStorage.setItem('sessionYear', sessionYear);
-    localStorage.setItem('themeColor', themeColor);
-    // The GradeRulesForm handles its own saving, but we can trigger a toast here
-    // for overall settings saved.
-    toast({
-      title: 'Settings Saved',
-      description: 'Your changes have been saved successfully.',
-    });
+  const handleValueChange = (key: keyof UserSettings, value: any) => {
+    setLocalSettings(prev => (prev ? { ...prev, [key]: value } : null));
   };
+  
+  const handleGradeRulesChange = (newRules: GradeRule[]) => {
+    handleValueChange('gradeRules', newRules);
+  };
+
+  const handleSave = async () => {
+    if (!user || !localSettings) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to save settings.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setIsSaving(true);
+    
+    try {
+      await setDoc(settingsDocRef!, localSettings, { merge: true });
+      toast({
+        title: 'Settings Saved',
+        description: 'Your changes have been saved successfully.',
+      });
+    } catch (error: any) {
+      console.error('Error saving settings: ', error);
+      toast({
+        title: 'Save Failed',
+        description: error.message || 'Could not save settings.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoadingSettings || !localSettings) {
+    return (
+      <div className="flex w-full items-center justify-center p-8">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -147,8 +216,8 @@ export function SettingsForm() {
               <Input
                 id="school-name"
                 placeholder="e.g., Springfield High"
-                value={schoolName}
-                onChange={(e) => setSchoolName(e.target.value)}
+                value={localSettings.schoolName}
+                onChange={(e) => handleValueChange('schoolName', e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -156,8 +225,8 @@ export function SettingsForm() {
               <Input
                 id="session-year"
                 placeholder="e.g., 2024-2025"
-                value={sessionYear}
-                onChange={(e) => setSessionYear(e.target.value)}
+                value={localSettings.sessionYear}
+                onChange={(e) => handleValueChange('sessionYear', e.target.value)}
               />
             </div>
           </div>
@@ -165,8 +234,8 @@ export function SettingsForm() {
           <div className="space-y-2">
             <Label>Theme Color</Label>
             <RadioGroup
-              value={themeColor}
-              onValueChange={setThemeColor}
+              value={localSettings.themeColor}
+              onValueChange={(value) => handleValueChange('themeColor', value)}
               className="flex items-center gap-4"
             >
               {themeColors.map((color) => (
@@ -181,13 +250,13 @@ export function SettingsForm() {
                     className={cn(
                       'flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-2 transition-transform duration-200',
                       color.className,
-                      themeColor === color.value
+                      localSettings.themeColor === color.value
                         ? 'border-foreground scale-110'
                         : 'border-transparent'
                     )}
                     aria-label={color.name}
                   >
-                    {themeColor === color.value && (
+                    {localSettings.themeColor === color.value && (
                       <Check className="h-6 w-6 text-white" />
                     )}
                   </Label>
@@ -201,28 +270,48 @@ export function SettingsForm() {
               label="School Logo"
               description="PNG with transparent background recommended."
               storageKey="schoolLogo"
+              currentValue={localSettings.schoolLogo}
+              onValueChange={(value) => handleValueChange('schoolLogo', value)}
             />
             <ImageUploader
               label="Class Teacher's Signature"
               description="Upload a clear signature."
-              storageKey="Class Teacher's Signature"
+              storageKey="teacherSignature"
+              currentValue={localSettings.teacherSignature}
+              onValuecha
+nge={(value) => handleValueChange('teacherSignature', value)}
             />
             <ImageUploader
               label="Principal's Signature"
               description="Upload a clear signature."
-              storageKey="Principal's Signature"
+              storageKey="principalSignature"
+              currentValue={localSettings.principalSignature}
+              onValueChange={(value) => handleValueChange('principalSignature', value)}
             />
           </div>
         </CardContent>
-        <CardFooter className="flex justify-end bg-card p-4 border-t">
-          <Button onClick={handleSave}>
-            <Save className="mr-2 h-4 w-4" />
-            Save General Settings
-          </Button>
-        </CardFooter>
       </Card>
       
-      <GradeRulesForm />
+      <GradeRulesForm 
+        rules={localSettings.gradeRules}
+        onRulesChange={handleGradeRulesChange}
+      />
+      
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? (
+                <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+                </>
+            ) : (
+                <>
+                <Save className="mr-2 h-4 w-4" />
+                Save All Settings
+                </>
+            )}
+        </Button>
+      </div>
 
     </div>
   );

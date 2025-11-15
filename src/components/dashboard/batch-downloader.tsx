@@ -21,8 +21,10 @@ import { Progress } from '@/components/ui/progress';
 import { generateReportCardHtml } from './report-card-template';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { GradeRule } from './grade-rules-form';
+import { GradeRule, UserSettings } from './settings-form';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useFirestore, useUser } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 interface BatchDownloaderProps {
   studentsData?: any[];
@@ -74,13 +76,16 @@ export function BatchDownloader({
   const [generationProgress, setGenerationProgress] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const { user } = useUser();
+  const [userSettings, setUserSettings] = useState<UserSettings | undefined>();
 
   const reportCardHtmls = useMemo(() => {
     return reportCards.map((res) => ({
       studentName: res.studentData.Name || 'Unknown Student',
-      reportCardHtml: generateReportCardHtml(res),
+      reportCardHtml: generateReportCardHtml(res, userSettings),
     }));
-  }, [reportCards]);
+  }, [reportCards, userSettings]);
 
 
   useEffect(() => {
@@ -99,7 +104,7 @@ export function BatchDownloader({
 
 
   const handleGenerate = async () => {
-    if (isGenerating) return;
+    if (isGenerating || !user) return;
 
     setIsGenerating(true);
     setReportCards([]);
@@ -123,16 +128,13 @@ export function BatchDownloader({
         return;
       }
 
+      // Fetch user settings for grade rules
       let gradeRules: GradeRule[] | undefined = undefined;
-      try {
-        const storedRules = localStorage.getItem('gradeRules');
-        if (storedRules) {
-          gradeRules = JSON.parse(storedRules).map(
-            ({ id, ...rest }: any) => rest
-          );
-        }
-      } catch (e) {
-        console.error('Could not parse grade rules, using default.', e);
+      const settingsDoc = await import('firebase/firestore').then(m => m.getDoc(doc(firestore, 'user_settings', user.uid)));
+      if (settingsDoc.exists()) {
+          const settings = settingsDoc.data() as UserSettings;
+          setUserSettings(settings);
+          gradeRules = settings.gradeRules;
       }
 
       const allResults: StudentResult[] = [];

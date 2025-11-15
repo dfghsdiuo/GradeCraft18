@@ -2,6 +2,7 @@
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import type { StudentResult } from "@/ai/flows/types";
+import type { UserSettings } from "./settings-form";
 
 export type Subject = {
     name: string;
@@ -10,16 +11,14 @@ export type Subject = {
 
 const schoolLogoPlaceholder = PlaceHolderImages.find(p => p.id === 'school_logo');
 
-export const generateReportCardHtml = (result: StudentResult): string => {
+export const generateReportCardHtml = (result: StudentResult, settings?: UserSettings): string => {
     const { studentData, totalMarks, percentage, grade, remarks } = result;
 
     let subjects: Subject[] = [];
     try {
-        // Safely parse the subjects JSON string, falling back to an empty array on error
         subjects = JSON.parse(result.subjects || '[]');
     } catch (error) {
         console.error("Failed to parse subjects JSON string:", result.subjects, error);
-        // Gracefully handle error by leaving subjects as an empty array
     }
 
     const studentName = studentData['Name'] || 'N/A';
@@ -27,21 +26,11 @@ export const generateReportCardHtml = (result: StudentResult): string => {
     const rollNo = studentData['Roll No.'] || 'N/A';
     const studentClass = studentData['Class'] || 'N/A';
 
-    let schoolName = "Springfield High";
-    let session = "2024-2025";
-    let schoolLogoUrl = schoolLogoPlaceholder?.imageUrl || ""; 
-    let teacherSignatureUrl = "";
-    let principalSignatureUrl = "";
-
-
-    if (typeof window !== 'undefined') {
-        schoolName = localStorage.getItem('schoolName') || schoolName;
-        session = localStorage.getItem('sessionYear') || session;
-        schoolLogoUrl = localStorage.getItem('schoolLogo') || schoolLogoUrl;
-        teacherSignatureUrl = localStorage.getItem("Class Teacher's Signature") || "";
-        principalSignatureUrl = localStorage.getItem("Principal's Signature") || "";
-    }
-
+    const schoolName = settings?.schoolName || "Springfield High";
+    const session = settings?.sessionYear || "2024-2025";
+    const schoolLogoUrl = settings?.schoolLogo || schoolLogoPlaceholder?.imageUrl || ""; 
+    const teacherSignatureUrl = settings?.teacherSignature || "";
+    const principalSignatureUrl = settings?.principalSignature || "";
 
     const subjectsRows = subjects.map(subject => `
         <tr class="border-b">

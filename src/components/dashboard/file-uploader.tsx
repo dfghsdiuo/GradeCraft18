@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { UploadCloud, File, X, Loader2, Users, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -15,15 +15,9 @@ import { generateReportCardHtml } from './report-card-template';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { GradeRule } from './grade-rules-form';
-
-
-interface HistoryItem {
-  id: number;
-  fileName: string;
-  date: string;
-  fileCount: number;
-  studentsData: any[];
-}
+import { useFirestore, useUser } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import type { UserSettings } from './settings-form';
 
 interface ReportCardInfo {
   reportCardHtml: string;
@@ -69,11 +63,8 @@ export function FileUploader() {
   const [reportCards, setReportCards] = useState<ReportCardInfo[]>([]);
   const [generationProgress, setGenerationProgress] = useState(0);
   const { toast } = useToast();
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  const { user } = useUser();
+  const firestore = useFirestore();
 
   const handleSetFile = (selectedFile: File | null) => {
     if (selectedFile) {
@@ -127,44 +118,38 @@ export function FileUploader() {
     }
   };
 
-  const saveToHistory = (
+  const saveToHistory = async (
     name: string,
     fileCount: number,
     studentsData: any[],
   ) => {
-    if (!isClient) return;
+    if (!user) return;
     try {
-      const storedHistory = localStorage.getItem('reportCardHistory');
-      const history: HistoryItem[] = storedHistory ? JSON.parse(storedHistory) : [];
-      
-      const newHistoryItem: HistoryItem = {
-        id: Date.now(),
-        fileName: name,
-        date: new Date().toISOString(),
-        fileCount: fileCount,
-        studentsData: studentsData,
-      };
-
-      const updatedHistory = [newHistoryItem, ...history];
-      localStorage.setItem('reportCardHistory', JSON.stringify(updatedHistory));
-    } catch (error) {
+        const historyCollection = collection(firestore, 'report_card_history');
+        await addDoc(historyCollection, {
+            userId: user.uid,
+            fileName: name,
+            date: new Date().toISOString(),
+            fileCount: fileCount,
+            studentsData: studentsData, // Be wary of 1MB doc limit
+            createdAt: serverTimestamp(),
+        });
+    } catch (error: any) {
       console.error("Failed to save to history", error);
-      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-        toast({
+      toast({
           title: 'History Not Saved',
-          description: 'Could not save to history because browser storage is full.',
+          description: error.message || 'Could not save to history.',
           variant: 'destructive',
         });
-      }
     }
   };
 
 
   const handleGenerate = async () => {
-    if (!file) {
+    if (!file || !user) {
       toast({
-        title: 'No File Selected',
-        description: 'Please upload a file to generate report cards.',
+        title: 'Not Ready',
+        description: 'Please log in and upload a file to generate report cards.',
         variant: 'destructive',
       });
       return;
@@ -209,14 +194,12 @@ export function FileUploader() {
         return;
       }
 
+      // Fetch user settings for grade rules
       let gradeRules: GradeRule[] | undefined = undefined;
-      try {
-        const storedRules = localStorage.getItem('gradeRules');
-        if (storedRules) {
-          gradeRules = JSON.parse(storedRules).map(({ id, ...rest }: any) => rest);
-        }
-      } catch (e) {
-        console.error("Could not parse grade rules, using default.", e);
+      const settingsDoc = await import('firebase/firestore').then(m => m.getDoc(m.doc(firestore, 'user_settings', user.uid)));
+      if (settingsDoc.exists()) {
+          const settings = settingsDoc.data() as UserSettings;
+          gradeRules = settings.gradeRules;
       }
       
       const allResults: ReportCardInfo[] = [];
@@ -230,7 +213,7 @@ export function FileUploader() {
             if (result && result.results) {
               const batchResults = result.results.map(res => {
                   const studentName = res.studentData.Name || 'Unknown Student';
-                  const reportCardHtml = generateReportCardHtml(res);
+                  const reportCardHtml = generateReportCardHtml(res, settingsDoc.exists() ? settingsDoc.data() as UserSettings : undefined);
                   return { studentName, reportCardHtml };
               });
               allResults.push(...batchResults);

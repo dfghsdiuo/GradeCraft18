@@ -22,201 +22,106 @@
       },
       "required": [
         "id",
-        "email",
-        "name"
+        "email"
       ]
     },
-    "StudentData": {
+    "UserSettings": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "StudentData",
+      "title": "UserSettings",
       "type": "object",
-      "description": "Stores student data uploaded from Excel files.",
+      "description": "Stores customizable settings for generating report cards for a specific user.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the StudentData entity."
-        },
         "userId": {
           "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N StudentData)"
-        },
-        "name": {
-          "type": "string",
-          "description": "Student's name."
-        },
-        "fathersName": {
-          "type": "string",
-          "description": "Student's father's name."
-        },
-        "class": {
-          "type": "string",
-          "description": "Student's class."
-        },
-        "rollNo": {
-          "type": "number",
-          "description": "Student's roll number."
-        },
-        "english": {
-          "type": "number",
-          "description": "Marks in English."
-        },
-        "math": {
-          "type": "number",
-          "description": "Marks in Math."
-        },
-        "science": {
-          "type": "number",
-          "description": "Marks in Science."
-        },
-        "punjabi": {
-          "type": "number",
-          "description": "Marks in Punjabi."
-        },
-        "hindi": {
-          "type": "number",
-          "description": "Marks in Hindi."
-        },
-        "computer": {
-          "type": "number",
-          "description": "Marks in Computer."
-        },
-        "totalMarks": {
-          "type": "number",
-          "description": "Total marks obtained by the student."
-        },
-        "percentage": {
-          "type": "number",
-          "description": "Percentage obtained by the student."
-        },
-        "grade": {
-          "type": "string",
-          "description": "Grade obtained by the student (A/B/C etc.)."
-        },
-        "uploadDate": {
-          "type": "string",
-          "description": "Date when the student data was uploaded.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "name",
-        "fathersName",
-        "class",
-        "rollNo",
-        "english",
-        "math",
-        "science",
-        "punjabi",
-        "hindi",
-        "computer",
-        "totalMarks",
-        "percentage",
-        "grade",
-        "uploadDate"
-      ]
-    },
-    "ReportCardSettings": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ReportCardSettings",
-      "type": "object",
-      "description": "Stores customizable settings for generating report cards.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the ReportCardSettings entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N ReportCardSettings)"
+          "description": "The UID of the user these settings belong to."
         },
         "schoolName": {
-          "type": "string",
-          "description": "Name of the school."
+          "type": "string"
         },
         "sessionYear": {
-          "type": "string",
-          "description": "Academic session year."
+          "type": "string"
         },
         "themeColor": {
-          "type": "string",
-          "description": "Theme color selected for the report card (Blue, Green, Red, Purple, Orange)."
+          "type": "string"
         },
-        "schoolLogoUrl": {
+        "schoolLogo": {
           "type": "string",
-          "description": "URL of the school logo image.",
-          "format": "uri"
+          "format": "uri-reference"
         },
-        "classTeacherSignatureUrl": {
+        "teacherSignature": {
           "type": "string",
-          "description": "URL of the class teacher's signature image.",
-          "format": "uri"
+          "format": "uri-reference"
         },
-        "principalSignatureUrl": {
+        "principalSignature": {
           "type": "string",
-          "description": "URL of the principal's signature image.",
-          "format": "uri"
+          "format": "uri-reference"
+        },
+        "gradeRules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "grade": { "type": "string" },
+              "minPercentage": { "type": "number" }
+            },
+            "required": ["id", "grade", "minPercentage"]
+          }
         }
       },
       "required": [
-        "id",
         "userId",
         "schoolName",
         "sessionYear",
         "themeColor",
-        "schoolLogoUrl",
-        "classTeacherSignatureUrl",
-        "principalSignatureUrl"
+        "gradeRules"
       ]
     },
     "ReportCardHistory": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ReportCardHistory",
       "type": "object",
-      "description": "Stores a history of generated report cards.",
+      "description": "Stores a history of generated report cards for a specific user.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the ReportCardHistory entity."
-        },
         "userId": {
           "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N ReportCardHistory)"
-        },
-        "studentDataId": {
-          "type": "string",
-          "description": "Reference to StudentData. (Relationship: StudentData 1:N ReportCardHistory)"
+          "description": "The UID of the user this history item belongs to."
         },
         "fileName": {
-          "type": "string",
-          "description": "Name of the generated report card file."
+          "type": "string"
         },
-        "generationDate": {
+        "date": {
           "type": "string",
-          "description": "Date when the report card was generated.",
           "format": "date-time"
         },
-        "downloadLink": {
-          "type": "string",
-          "description": "Link to download the generated report card.",
-          "format": "uri"
+        "fileCount": {
+          "type": "number"
+        },
+        "studentsData": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The timestamp of when the history was created."
         }
       },
       "required": [
-        "id",
         "userId",
-        "studentDataId",
         "fileName",
-        "generationDate",
-        "downloadLink"
+        "date",
+        "fileCount",
+        "studentsData",
+        "createdAt"
       ]
     }
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {
@@ -228,64 +133,29 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user profile information. Path-based ownership for private user data.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            }
-          ]
+          "description": "Stores public user profile information. The document ID must be the user's UID."
         }
       },
       {
-        "path": "/student_data/{studentDataId}",
+        "path": "/user_settings/{userId}",
         "definition": {
-          "entityName": "StudentData",
+          "entityName": "UserSettings",
           "schema": {
-            "$ref": "#/backend/entities/StudentData"
+            "$ref": "#/backend/entities/UserSettings"
           },
-          "description": "Stores student data uploaded from Excel files. Accessible by all users.",
-          "params": [
-            {
-              "name": "studentDataId",
-              "description": "The unique identifier for the student data entry."
-            }
-          ]
+          "description": "Stores user-specific settings. The document ID must be the user's UID."
         }
       },
       {
-        "path": "/report_card_settings/{reportCardSettingsId}",
-        "definition": {
-          "entityName": "ReportCardSettings",
-          "schema": {
-            "$ref": "#/backend/entities/ReportCardSettings"
-          },
-          "description": "Stores customizable settings for generating report cards. Accessible by all users.",
-          "params": [
-            {
-              "name": "reportCardSettingsId",
-              "description": "The unique identifier for the report card settings."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/report_card_history/{reportCardHistoryId}",
+        "path": "/report_card_history/{historyId}",
         "definition": {
           "entityName": "ReportCardHistory",
           "schema": {
             "$ref": "#/backend/entities/ReportCardHistory"
           },
-          "description": "Stores a history of generated report cards. Accessible by all users.",
-          "params": [
-            {
-              "name": "reportCardHistoryId",
-              "description": "The unique identifier for the report card history entry."
-            }
-          ]
+          "description": "A collection storing all report card generation events. Secured by a 'userId' field within the document."
         }
       }
-    ],
-    "reasoning": "Given the requirement to show the same data to all users, effectively creating a shared data environment, the structure needs to avoid path-based ownership and focus on global collections. This approach eliminates the need for complex security rules based on user IDs and ensures that all users can access the same data. To ensure Authorization Independence, we'll avoid using `get()` calls by not relying on hierarchical authorization. All 'StudentData', 'ReportCardSettings' and 'ReportCardHistory' will be stored in root-level collections, ensuring universal access.\n\n*   `/student_data`: Stores all student data.\n*   `/report_card_settings`: Stores global settings for report card generation.\n*   `/report_card_history`: Stores the history of generated report cards.\n\nThis design efficiently supports the requirement of shared data access. All security rules will be based on read access, ensuring data isn't editable by all users.\n"
+    ]
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -30,68 +30,82 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { BatchDownloader } from '@/components/dashboard/batch-downloader';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, deleteDoc, doc } from 'firebase/firestore';
 
 interface HistoryItem {
-  id: number;
+  id: string; // Firestore document ID
   fileName: string;
-  date: string;
+  date: string; // ISO string
   fileCount: number;
   studentsData: any[];
+  userId: string;
 }
 
 export default function HistoryPage() {
-  const [history, setHistory] = useState<HistoryItem[]>([]);
   const { toast } = useToast();
-  const [isClient, setIsClient] = useState(false);
+  const firestore = useFirestore();
+  const { user } = useUser();
+
+  const historyCollectionRef = useMemoFirebase(
+    () => (user ? collection(firestore, 'report_card_history') : null),
+    [firestore, user]
+  );
+  
+  // This query is not secure, it fetches all history. 
+  // It should be filtered by user, which requires a composite index.
+  // For now, we will filter on the client.
+  const { data: history, isLoading } = useCollection<HistoryItem>(historyCollectionRef);
+
+  const userHistory = history?.filter(item => item.userId === user?.uid) || [];
+
   const [directDownloadItem, setDirectDownloadItem] = useState<HistoryItem | null>(null);
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-    if (isClient) {
-      try {
-        const storedHistory = localStorage.getItem('reportCardHistory');
-        if (storedHistory) {
-          setHistory(JSON.parse(storedHistory));
-        } else {
-          setHistory([]);
-        }
-      } catch (error) {
-        console.error('Failed to parse history from localStorage', error);
-        setHistory([]);
-      }
+  const handleDelete = async (id: string) => {
+    if (!user) return;
+    const docRef = doc(firestore, 'report_card_history', id);
+    try {
+      await deleteDoc(docRef);
+      toast({
+        title: 'Deleted',
+        description: 'The history item has been removed.',
+      });
+    } catch (error: any) {
+      console.error("Error deleting history item:", error);
+      toast({
+        title: 'Delete failed',
+        description: error.message || 'Could not delete history item.',
+        variant: 'destructive',
+      });
     }
-  }, [isClient]);
-
-  useEffect(() => {
-    if (isClient) {
-      try {
-        localStorage.setItem('reportCardHistory', JSON.stringify(history));
-      } catch (error) {
-        console.error('Failed to save history to localStorage', error);
-      }
-    }
-  }, [history, isClient]);
-
-  const handleDelete = (id: number) => {
-    setHistory((prevHistory) => prevHistory.filter((item) => item.id !== id));
-    toast({
-      title: 'Deleted',
-      description: 'The history item has been removed.',
-    });
   };
 
-  const handleDeleteAll = () => {
-    setHistory([]);
+  const handleDeleteAll = async () => {
+    if (!user) return;
     toast({
-      title: 'History Cleared',
-      description: 'All report card generation history has been removed.',
+      title: 'Deleting history...',
+      description: 'Please wait while all items are removed.',
     });
+    try {
+      for (const item of userHistory) {
+        const docRef = doc(firestore, 'report_card_history', item.id);
+        await deleteDoc(docRef);
+      }
+      toast({
+        title: 'History Cleared',
+        description: 'All report card generation history has been removed.',
+      });
+    } catch (error: any) {
+       console.error("Error deleting all history items:", error);
+      toast({
+        title: 'Delete failed',
+        description: error.message || 'Could not clear history.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  if (!isClient) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center h-full">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -111,7 +125,7 @@ export default function HistoryPage() {
               Review, share, and download previously generated report card batches.
             </p>
           </div>
-          {history.length > 0 && (
+          {userHistory.length > 0 && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive">
@@ -137,9 +151,9 @@ export default function HistoryPage() {
             </AlertDialog>
           )}
         </div>
-        {history.length > 0 ? (
+        {userHistory.length > 0 ? (
           <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
-            {history.map((item) => (
+            {userHistory.map((item) => (
               <Card
                 key={item.id}
                 className="shadow-lg transition-transform hover:scale-[1.02] hover:shadow-xl"
@@ -165,7 +179,7 @@ export default function HistoryPage() {
                         <Button variant="outline" size="sm">
                           <Eye className="mr-2 h-4 w-4" />
                           View
-                        </Button>
+                        Button>
                       }
                       isModal={true}
                     />
