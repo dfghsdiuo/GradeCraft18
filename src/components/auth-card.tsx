@@ -15,9 +15,10 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import {
-  initiateEmailSignUp,
-  initiateEmailSignIn,
-} from '@/firebase/non-blocking-login';
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  AuthErrorCodes,
+} from 'firebase/auth';
 import { useAuth } from '@/firebase/provider';
 import { Loader2 } from 'lucide-react';
 
@@ -30,9 +31,7 @@ export default function AuthCard() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleAuthAction = async (
-    action: 'sign-in' | 'sign-up'
-  ) => {
+  const handleAuthAction = async (action: 'sign-in' | 'sign-up') => {
     if (!email || !password) {
       toast({
         variant: 'destructive',
@@ -46,24 +45,49 @@ export default function AuthCard() {
 
     try {
       if (action === 'sign-up') {
-        initiateEmailSignUp(auth, email, password);
+        await createUserWithEmailAndPassword(auth, email, password);
+        toast({
+          title: 'Account Created!',
+          description: "You've been signed in successfully.",
+        });
       } else {
-        initiateEmailSignIn(auth, email, password);
+        await signInWithEmailAndPassword(auth, email, password);
       }
-      // Non-blocking, so we navigate immediately. The useUser hook will handle the redirect.
-      toast({
-        title: 'Processing...',
-        description: 'Please wait while we set up your account.',
-      });
       router.push('/dashboard');
     } catch (error: any) {
       console.error(`${action} error:`, error);
+      let description = 'An unexpected error occurred. Please try again.';
+      switch (error.code) {
+        case AuthErrorCodes.INVALID_PASSWORD:
+        case 'auth/wrong-password':
+          description =
+            'The password you entered is incorrect. Please try again.';
+          break;
+        case AuthErrorCodes.USER_DELETED:
+        case 'auth/user-not-found':
+          description =
+            'No account found with this email. Please sign up first.';
+          break;
+        case AuthErrorCodes.EMAIL_EXISTS:
+        case 'auth/email-already-in-use':
+          description =
+            'An account with this email already exists. Please sign in.';
+          break;
+        case AuthErrorCodes.INVALID_EMAIL:
+          description = 'The email address is not valid. Please check it.';
+          break;
+        case AuthErrorCodes.WEAK_PASSWORD:
+          description = 'The password is too weak. Please use at least 6 characters.';
+          break;
+        default:
+          description = error.message;
+      }
       toast({
         variant: 'destructive',
         title: 'Authentication Failed',
-        description:
-          error.message || 'An unexpected error occurred. Please try again.',
+        description: description,
       });
+    } finally {
       setLoading(false);
     }
   };
