@@ -18,6 +18,26 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+// Custom WhatsApp Icon
+function WhatsAppIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+    </svg>
+  );
+}
+
 const MOCK_HISTORY_DATA = [
   {
     id: 1,
@@ -109,31 +129,18 @@ export default function HistoryPage() {
     });
   };
 
-  const handleShare = async (fileName: string) => {
-    const shareData = {
-      title: 'Report Cards',
-      text: `Check out the generated report cards: ${fileName}`,
-      url: window.location.href,
-    };
-    try {
-      if (navigator.share && navigator.canShare(shareData)) {
-        await navigator.share(shareData);
-        toast({ title: 'Shared successfully!' });
-      } else {
-        navigator.clipboard.writeText(shareData.url);
-        toast({
-          title: 'Link Copied',
-          description: 'Sharing is not supported, but the link has been copied to your clipboard.',
-        });
-      }
-    } catch (error) {
-      console.error('Error sharing:', error);
-      toast({
-        title: 'Sharing Failed',
-        description: 'Could not share the file.',
-        variant: 'destructive',
-      });
-    }
+  const handleShare = (fileName: string) => {
+    const blob = new Blob([`Dummy content for ${fileName}`], {
+      type: 'application/zip',
+    });
+    const url = URL.createObjectURL(blob);
+    const text = `Hello, please find the report cards for ${fileName} here: ${url}`;
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(whatsappUrl, '_blank');
+    toast({
+      title: 'WhatsApp Opened',
+      description: 'A new tab to share on WhatsApp has been opened.',
+    });
   };
   
   if (!isClient) {
@@ -180,11 +187,13 @@ export default function HistoryPage() {
                     Download
                   </Button>
                   <Button
-                    variant="ghost"
-                    size="icon"
+                    variant="secondary"
+                    size="sm"
                     onClick={() => handleShare(item.fileName)}
+                    className="bg-green-500 hover:bg-green-600 text-white"
                   >
-                    <Share2 className="h-4 w-4" />
+                    <WhatsAppIcon className="mr-2 h-4 w-4" />
+                    Share
                   </Button>
                   <Button
                     variant="destructive"
