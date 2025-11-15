@@ -142,31 +142,36 @@ export function FileUploader() {
         return;
       }
 
-      const generated: ReportCardOutput[] = [];
-      for (let i = 0; i < students.length; i++) {
-        const studentData = students[i];
-        try {
-          const result = await generateReportCard({
-            studentData: JSON.stringify(studentData),
-          });
-          generated.push(result);
-          setReportCards([...generated]); // Update state incrementally
-        } catch (error) {
-           console.error(`Error generating report card for student ${i + 1}:`, studentData, error);
-           // Optionally, show a toast for the failed student
-        }
-        setGenerationProgress(((i + 1) / students.length) * 100);
+      let generatedCount = 0;
+
+      const generationPromises = students.map(studentData => 
+        generateReportCard({
+          studentData: JSON.stringify(studentData),
+        }).then(result => {
+          generatedCount++;
+          setGenerationProgress((generatedCount / students.length) * 100);
+          return result;
+        }).catch(error => {
+          console.error(`Error generating report card for student:`, studentData, error);
+          // Return null or a specific error object for failed generations
+          return null;
+        })
+      );
+
+      const results = await Promise.all(generationPromises);
+      const successfulResults = results.filter(r => r !== null) as ReportCardOutput[];
+
+      setReportCards(successfulResults);
+
+      if (successfulResults.length > 0) {
+        saveToHistory(file.name, successfulResults.length);
       }
       
-      setReportCards(generated);
-
-      if (generated.length > 0) {
-        saveToHistory(file.name, generated.length);
-      }
+      setGenerationProgress(100);
 
       toast({
         title: 'Generation Complete',
-        description: `${generated.length} of ${students.length} report cards have been successfully generated.`,
+        description: `${successfulResults.length} of ${students.length} report cards have been successfully generated.`,
       });
     } catch (error) {
       console.error('Error generating report cards:', error);
