@@ -45,33 +45,30 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <header className="sticky top-0 z-10 flex h-24 items-center justify-between gap-4 border-b bg-card px-4 md:px-6">
-        <div className="w-1/3">
-          {/* Intentionally left blank for spacing */}
-        </div>
-        <div className="flex flex-1 flex-col items-center text-center">
+      <header className="sticky top-0 z-10 flex h-28 items-center justify-center gap-4 border-b bg-card px-4 md:px-6">
+        <div className="flex flex-col items-center text-center">
             <Logo />
-            <p className="mt-1 text-xl font-bold text-muted-foreground">
-              Automate student report cards with a single click.
+            <p className="mt-2 text-lg font-semibold text-foreground">
+              Effortlessly create and manage student report cards with a single click.
             </p>
-        </div>
-        <div className="w-1/3 flex justify-end">
-            <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button variant="outline" size="icon" className="rounded-full h-12 w-12" onClick={handleSignOut}>
-                            <LogOut className="h-5 w-5" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Sign Out</p>
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
         </div>
       </header>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <DashboardNav />
+        <div className='flex items-center justify-center gap-4'>
+          <DashboardNav />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" className="h-10 w-10" onClick={handleSignOut}>
+                    <LogOut className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                  <p>Sign Out</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
         <div className="flex-1">{children}</div>
       </main>
     </div>

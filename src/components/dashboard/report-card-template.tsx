@@ -53,9 +53,9 @@ export const generateReportCardHtml = (result: StudentResult, settings?: UserSet
                     ${schoolLogoImg}
                 </div>
                 <div class="w-1/2">
-                    <h1 class="text-4xl font-bold text-blue-700">${schoolName}</h1>
-                    <p class="text-md">${schoolAddress}</p>
-                    <p class="text-lg">Final Report Card - Session ${session}</p>
+                    <h1 class="text-5xl font-bold text-blue-700">${schoolName}</h1>
+                    <p class="text-lg">${schoolAddress}</p>
+                    <p class="text-xl">Final Report Card - Session ${session}</p>
                 </div>
                 <div class="w-1/4"></div>
             </div>

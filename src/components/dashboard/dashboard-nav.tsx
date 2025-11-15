@@ -15,15 +15,15 @@ export default function DashboardNav() {
   const pathname = usePathname();
 
   return (
-    <div className="flex items-center justify-center">
-      <div className="flex items-center gap-2 rounded-lg bg-card p-1 shadow-inner">
+    <div className="flex items-center w-full">
+      <div className="flex w-full items-center gap-2 rounded-lg bg-card p-1 shadow-inner">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
-            <Link href={item.href} key={item.href}>
+            <Link href={item.href} key={item.href} className="flex-1">
               <button
                 className={cn(
-                  'flex items-center gap-2 rounded-md px-6 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  'w-full flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   isActive
                     ? 'bg-primary text-primary-foreground shadow-sm'
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
