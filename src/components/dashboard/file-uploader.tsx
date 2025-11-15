@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { UploadCloud, File, X, Loader2, Users } from 'lucide-react';
+import { UploadCloud, File, X, Loader2, Users, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
@@ -13,6 +13,9 @@ import {
 import { ReportCardDisplay } from './report-card-display';
 import { Progress } from '@/components/ui/progress';
 import { generateReportCardHtml, Subject } from './report-card-template';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+
 
 interface HistoryItem {
   id: number;
@@ -28,11 +31,39 @@ interface ReportCardInfo {
 
 const BATCH_SIZE = 50;
 
+async function addPageToPdf(pdf: jsPDF, htmlContent: string) {
+  const reportElement = document.createElement('div');
+  reportElement.innerHTML = htmlContent;
+  reportElement.style.position = 'absolute';
+  reportElement.style.left = '-9999px';
+  reportElement.style.width = '210mm'; // A4 width
+  document.body.appendChild(reportElement);
+
+  const canvas = await html2canvas(reportElement, {
+    scale: 2,
+    useCORS: true,
+  });
+
+  document.body.removeChild(reportElement);
+
+  const imgData = canvas.toDataURL('image/png');
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = pdf.internal.pageSize.getHeight();
+  const canvasWidth = canvas.width;
+  const canvasHeight = canvas.height;
+  const ratio = canvasWidth / canvasHeight;
+  const height = pdfWidth / ratio;
+
+  pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, Math.min(height, pdfHeight));
+}
+
+
 export function FileUploader() {
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [reportCards, setReportCards] = useState<ReportCardInfo[]>([]);
   const [generationProgress, setGenerationProgress] = useState(0);
   const { toast } = useToast();
@@ -217,6 +248,57 @@ export function FileUploader() {
     }
   };
 
+  const handleDownloadAll = async () => {
+    if (reportCards.length === 0) {
+      toast({
+        title: 'No Report Cards',
+        description: 'Please generate report cards first.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsDownloading(true);
+    toast({
+      title: 'Preparing Single PDF...',
+      description: 'All report cards are being combined into one file.',
+    });
+
+    try {
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      for (const [index, card] of reportCards.entries()) {
+        if (index > 0) {
+          pdf.addPage();
+        }
+        await addPageToPdf(pdf, card.reportCardHtml);
+      }
+
+      pdf.save(`${fileName?.replace('.xlsx', '') || 'report_cards'}.pdf`);
+
+      toast({
+        title: 'Download Complete',
+        description: 'All report cards have been downloaded in a single PDF.',
+      });
+    } catch (error: any) {
+      console.error('Error generating combined PDF:', error);
+      toast({
+        title: 'Download Failed',
+        description:
+          error.message ||
+          'An error occurred while creating the combined PDF.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+
   const clearFile = () => {
     handleSetFile(null);
     setReportCards([]);
@@ -274,7 +356,7 @@ export function FileUploader() {
         size="lg"
         className="bg-green-600 px-8 py-6 text-lg font-bold text-white hover:bg-green-700"
         onClick={handleGenerate}
-        disabled={!file || isGenerating}
+        disabled={!file || isGenerating || isDownloading}
       >
         {isGenerating ? (
           <>
@@ -298,9 +380,27 @@ export function FileUploader() {
 
       {reportCards.length > 0 && (
         <div className="mt-8 w-full max-w-4xl space-y-8">
-          <h2 className="text-2xl font-bold tracking-tight text-foreground text-center">
-            Generated Report Cards ({reportCards.length})
-          </h2>
+          <div className="flex flex-col items-center justify-center gap-4">
+            <h2 className="text-2xl font-bold tracking-tight text-foreground text-center">
+              Generated Report Cards ({reportCards.length})
+            </h2>
+            <Button
+              onClick={handleDownloadAll}
+              disabled={isDownloading || isGenerating}
+            >
+              {isDownloading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Downloading...
+                </>
+              ) : (
+                <>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download All as Single PDF
+                </>
+              )}
+            </Button>
+          </div>
           {reportCards.map((card, index) => (
             <ReportCardDisplay key={index} htmlContent={card.reportCardHtml} studentName={card.studentName} />
           ))}

@@ -20,7 +20,7 @@ interface BatchDownloaderProps {
 
 const BATCH_SIZE = 50;
 
-async function generatePdfBlob(htmlContent: string): Promise<Blob> {
+async function addPageToPdf(pdf: jsPDF, htmlContent: string) {
   const reportElement = document.createElement('div');
   reportElement.innerHTML = htmlContent;
   reportElement.style.position = 'absolute';
@@ -36,12 +36,6 @@ async function generatePdfBlob(htmlContent: string): Promise<Blob> {
   document.body.removeChild(reportElement);
 
   const imgData = canvas.toDataURL('image/png');
-  const pdf = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4',
-  });
-
   const pdfWidth = pdf.internal.pageSize.getWidth();
   const pdfHeight = pdf.internal.pageSize.getHeight();
   const canvasWidth = canvas.width;
@@ -50,7 +44,6 @@ async function generatePdfBlob(htmlContent: string): Promise<Blob> {
   const height = pdfWidth / ratio;
 
   pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, Math.min(height, pdfHeight));
-  return pdf.output('blob');
 }
 
 export function BatchDownloader({ originalFileName }: BatchDownloaderProps) {
@@ -119,6 +112,12 @@ export function BatchDownloader({ originalFileName }: BatchDownloaderProps) {
         }
       });
       
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
       let generatedCount = 0;
 
       for (let i = 0; i < plainStudentsData.length; i += BATCH_SIZE) {
@@ -128,28 +127,26 @@ export function BatchDownloader({ originalFileName }: BatchDownloaderProps) {
         });
 
         if (result && result.results) {
-          for (const res of result.results) {
+          for (const [index, res] of result.results.entries()) {
             const subjects: Subject[] = JSON.parse(res.subjects || '[]');
             const reportCardHtml = generateReportCardHtml({ ...res, subjects });
-            const studentName = res.studentData.Name || 'Unknown_Student';
-
-            const pdfBlob = await generatePdfBlob(reportCardHtml);
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(pdfBlob);
-            link.download = `${studentName.replace(/\s+/g, '_')}_report_card.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(link.href);
+            
+            if (index > 0 || i > 0) {
+              pdf.addPage();
+            }
+            await addPageToPdf(pdf, reportCardHtml);
             
             generatedCount++;
             setGenerationProgress((generatedCount / plainStudentsData.length) * 100);
           }
         }
       }
+
+      pdf.save(`${originalFileName.replace('.xlsx', '')}_report_cards.pdf`);
+
       toast({
         title: 'Download Complete',
-        description: `Successfully downloaded ${generatedCount} report cards.`,
+        description: `Successfully downloaded ${generatedCount} report cards in a single PDF.`,
       });
     } catch (error: any) {
       console.error('Error during batch download:', error);
@@ -173,7 +170,7 @@ export function BatchDownloader({ originalFileName }: BatchDownloaderProps) {
           {originalFileName}
         </span>
         , please re-upload the original Excel file. The system will then
-        re-generate and download all the PDFs for you.
+        re-generate and download all the PDFs for you in a single file.
       </p>
 
       <div className="space-y-2">
@@ -216,7 +213,7 @@ export function BatchDownloader({ originalFileName }: BatchDownloaderProps) {
             Generating & Downloading...
           </>
         ) : (
-          'Download All PDFs'
+          'Download All as Single PDF'
         )}
       </Button>
     </div>
