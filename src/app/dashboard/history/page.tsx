@@ -45,7 +45,6 @@ interface HistoryItem {
   fileCount: number;
 }
 
-
 export default function HistoryPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const { toast } = useToast();
@@ -65,24 +64,24 @@ export default function HistoryPage() {
           setHistory([]);
         }
       } catch (error) {
-        console.error("Failed to parse history from localStorage", error);
+        console.error('Failed to parse history from localStorage', error);
         setHistory([]);
       }
     }
   }, [isClient]);
 
   useEffect(() => {
-    if(isClient) {
+    if (isClient) {
       try {
         localStorage.setItem('reportCardHistory', JSON.stringify(history));
       } catch (error) {
-        console.error("Failed to save history to localStorage", error);
+        console.error('Failed to save history to localStorage', error);
       }
     }
   }, [history, isClient]);
 
   const handleDelete = (id: number) => {
-    setHistory(history.filter((item) => item.id !== id));
+    setHistory((prevHistory) => prevHistory.filter((item) => item.id !== id));
     toast({
       title: 'Deleted',
       description: 'The history item has been removed.',
@@ -92,18 +91,18 @@ export default function HistoryPage() {
   const handleDeleteAll = () => {
     setHistory([]);
     toast({
-        title: "History Cleared",
-        description: "All report card generation history has been removed."
-    })
-  }
+      title: 'History Cleared',
+      description: 'All report card generation history has been removed.',
+    });
+  };
 
-  const handleShare = (fileName: string) => {
-    const subject = `Report Cards Generated: ${fileName}`;
-    const body = `Hello,\n\nThe report cards for ${fileName} have been generated.\n\nTo view and download them, please re-upload the source file in the Report Card Generator application.`;
+  const handleEmailShare = (item: HistoryItem) => {
+    const subject = `Report Cards Generated: ${item.fileName}`;
+    const body = `Hello,\n\nThe report cards for ${item.fileName} have been generated.\n\nTo view and download them, please re-upload the source file in the Report Card Generator application.`;
     const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = mailtoLink;
   };
-  
+
   if (!isClient) {
     return null; // or a loading spinner
   }
@@ -112,35 +111,35 @@ export default function HistoryPage() {
     <div>
       <div className="mb-8 flex justify-between items-center">
         <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
             Generation History
-            </h1>
-            <p className="text-muted-foreground mt-2">
+          </h1>
+          <p className="text-muted-foreground mt-2">
             Review and download previously generated report card batches.
-            </p>
+          </p>
         </div>
         {history.length > 0 && (
-            <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button variant="destructive">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete All
-                    </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete all
-                        your generation history.
-                    </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteAll}>Continue</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete All
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete all
+                  your generation history.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteAll}>Continue</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </div>
       {history.length > 0 ? (
@@ -182,28 +181,28 @@ export default function HistoryPage() {
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => handleShare(item.fileName)}
+                    onClick={() => handleEmailShare(item)}
                   >
                     <Mail className="mr-2 h-4 w-4" />
                     Email
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="icon">
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
+                      <Button variant="destructive" size="icon">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
-                        <AlertDialogHeader>
+                      <AlertDialogHeader>
                         <AlertDialogTitle>Delete History Item?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to delete the history for "{item.fileName}"? This action cannot be undone.
-                        </Description>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
+                          Are you sure you want to delete the history for "{item.fileName}"? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={() => handleDelete(item.id)}>Continue</AlertDialogAction>
-                        </AlertDialogFooter>
+                      </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
                 </div>
