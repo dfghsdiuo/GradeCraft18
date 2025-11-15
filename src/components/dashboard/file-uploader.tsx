@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import {
-  generateReportCard,
-  ReportCardOutput,
+  generateReportCards,
+  ReportCardsOutput,
 } from '@/ai/flows/report-card-flow';
 import { ReportCardDisplay } from './report-card-display';
 import { Progress } from '@/components/ui/progress';
@@ -19,11 +19,16 @@ interface HistoryItem {
   fileCount: number;
 }
 
+interface ReportCardInfo {
+  reportCardHtml: string;
+  studentName: string;
+}
+
 export function FileUploader() {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [reportCards, setReportCards] = useState<ReportCardOutput[]>([]);
+  const [reportCards, setReportCards] = useState<ReportCardInfo[]>([]);
   const [generationProgress, setGenerationProgress] = useState(0);
   const { toast } = useToast();
 
@@ -118,7 +123,7 @@ export function FileUploader() {
 
     setIsGenerating(true);
     setReportCards([]);
-    setGenerationProgress(0);
+    setGenerationProgress(0); // Reset progress
     toast({
       title: 'Generation Started',
       description:
@@ -141,38 +146,36 @@ export function FileUploader() {
         setIsGenerating(false);
         return;
       }
-
-      let generatedCount = 0;
-
-      const generationPromises = students.map(studentData => 
-        generateReportCard({
-          studentData: JSON.stringify(studentData),
-        }).then(result => {
-          generatedCount++;
-          setGenerationProgress((generatedCount / students.length) * 100);
-          return result;
-        }).catch(error => {
-          console.error(`Error generating report card for student:`, studentData, error);
-          // Return null or a specific error object for failed generations
-          return null;
-        })
-      );
-
-      const results = await Promise.all(generationPromises);
-      const successfulResults = results.filter(r => r !== null) as ReportCardOutput[];
-
-      setReportCards(successfulResults);
-
-      if (successfulResults.length > 0) {
-        saveToHistory(file.name, successfulResults.length);
-      }
       
+      // Simulate progress for batch processing
+      const progressInterval = setInterval(() => {
+        setGenerationProgress(prev => {
+          if (prev >= 95) {
+            clearInterval(progressInterval);
+            return 95;
+          }
+          return prev + 5;
+        });
+      }, 500);
+
+      const result = await generateReportCards({ studentsData: students });
+      
+      clearInterval(progressInterval);
       setGenerationProgress(100);
 
-      toast({
-        title: 'Generation Complete',
-        description: `${successfulResults.length} of ${students.length} report cards have been successfully generated.`,
-      });
+      if (result && result.reportCards) {
+        setReportCards(result.reportCards);
+        if (result.reportCards.length > 0) {
+          saveToHistory(file.name, result.reportCards.length);
+        }
+        toast({
+          title: 'Generation Complete',
+          description: `${result.reportCards.length} of ${students.length} report cards have been successfully generated.`,
+        });
+      } else {
+        throw new Error("AI did not return the expected report card data.");
+      }
+
     } catch (error) {
       console.error('Error generating report cards:', error);
       toast({
@@ -183,6 +186,8 @@ export function FileUploader() {
       });
     } finally {
       setIsGenerating(false);
+      // Ensure progress is 100 at the end, even on failure, to hide the bar.
+      setGenerationProgress(100);
     }
   };
 
@@ -256,7 +261,7 @@ export function FileUploader() {
         )}
       </Button>
 
-      {isGenerating && (
+      {isGenerating && generationProgress < 100 && (
         <div className="w-full max-w-2xl text-center">
             <Progress value={generationProgress} className="w-full" />
             <p className="text-sm text-muted-foreground mt-2">Generating {Math.round(generationProgress)}%</p>
@@ -269,7 +274,7 @@ export function FileUploader() {
             Generated Report Cards ({reportCards.length})
           </h2>
           {reportCards.map((card, index) => (
-            <ReportCardDisplay key={index} htmlContent={card.reportCardHtml} studentName={`Student ${index + 1}`} />
+            <ReportCardDisplay key={index} htmlContent={card.reportCardHtml} studentName={card.studentName} />
           ))}
         </div>
       )}
