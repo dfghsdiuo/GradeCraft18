@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Share2, Eye } from 'lucide-react';
+import { Download, Share2, Eye, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -17,9 +17,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import { useState } from 'react';
 
 // Custom WhatsApp Icon
-function WhatsAppIcon(props: React.SVGProps<SVGSVGElement>) {
+function WhatsAppIcon(props: React.SVGProps<SVGElement>) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -49,44 +52,90 @@ export function ReportCardDisplay({
   studentName,
 }: ReportCardDisplayProps) {
   const { toast } = useToast();
+  const [isDownloading, setIsDownloading] = useState(false);
 
-  const handleDownload = () => {
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${studentName.replace(/\s+/g, '_')}_report_card.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast({
-      title: 'Download Started',
-      description: `Report card for ${studentName} is downloading.`,
+  const generatePdf = async () => {
+    const reportElement = document.createElement('div');
+    reportElement.innerHTML = htmlContent;
+    // Append to body to ensure styles are applied, but make it invisible
+    reportElement.style.position = 'absolute';
+    reportElement.style.left = '-9999px';
+    reportElement.style.width = '210mm'; // A4 width
+    document.body.appendChild(reportElement);
+
+    const canvas = await html2canvas(reportElement, {
+      scale: 2, // Higher scale for better quality
+      useCORS: true,
     });
+    
+    document.body.removeChild(reportElement);
+
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+    const ratio = canvasWidth / canvasHeight;
+    const height = pdfWidth / ratio;
+
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, Math.min(height, pdfHeight));
+    return pdf;
+  };
+
+
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    toast({
+      title: 'Generating PDF...',
+      description: `Report card for ${studentName} is being prepared.`,
+    });
+    try {
+      const pdf = await generatePdf();
+      pdf.save(`${studentName.replace(/\s+/g, '_')}_report_card.pdf`);
+      toast({
+        title: 'Download Started',
+        description: `PDF report card for ${studentName} is downloading.`,
+      });
+    } catch (error) {
+       console.error('Error generating PDF:', error);
+       toast({
+        title: 'Download Failed',
+        description: 'Could not generate the PDF file at this time.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const handleShare = async () => {
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const file = new File(
-      [blob],
-      `${studentName.replace(/\s+/g, '_')}_report_card.html`,
-      { type: 'text/html' }
-    );
-
-    const shareData = {
-        files: [file],
-        title: `Report Card for ${studentName}`,
-        text: `Here is the report card for ${studentName}.`,
-    };
-
     try {
+      const pdf = await generatePdf();
+      const pdfBlob = pdf.output('blob');
+      const file = new File(
+        [pdfBlob],
+        `${studentName.replace(/\s+/g, '_')}_report_card.pdf`,
+        { type: 'application/pdf' }
+      );
+
+      const shareData = {
+          files: [file],
+          title: `Report Card for ${studentName}`,
+          text: `Here is the report card for ${studentName}.`,
+      };
+
       if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
         await navigator.share(shareData);
         toast({ title: 'Shared successfully!' });
       } else {
         // Fallback for browsers that don't support file sharing
-        const url = URL.createObjectURL(blob);
+        const url = URL.createObjectURL(pdfBlob);
         navigator.clipboard.writeText(url);
         toast({
           title: 'Link Copied!',
@@ -103,16 +152,30 @@ export function ReportCardDisplay({
     }
   };
 
-  const handleWhatsAppShare = () => {
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const text = `Hello, please find the report card for ${studentName} here: ${url}`;
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-    window.open(whatsappUrl, '_blank');
+  const handleWhatsAppShare = async () => {
     toast({
-      title: 'WhatsApp Opened',
-      description: 'A new tab to share on WhatsApp has been opened.',
+      title: 'Preparing PDF for WhatsApp...',
+      description: 'Please wait a moment.',
     });
+    try {
+      const pdf = await generatePdf();
+      const pdfBlob = pdf.output('blob');
+      const url = URL.createObjectURL(pdfBlob);
+      const text = `Hello, please find the report card for ${studentName} here: ${url}`;
+      const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+      window.open(whatsappUrl, '_blank');
+      toast({
+        title: 'WhatsApp Opened',
+        description: 'A new tab to share on WhatsApp has been opened.',
+      });
+    } catch (error) {
+      console.error('Error sharing to WhatsApp:', error);
+      toast({
+        title: 'Sharing Failed',
+        description: 'Could not prepare the PDF for sharing.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -148,9 +211,13 @@ export function ReportCardDisplay({
           </DialogContent>
         </Dialog>
 
-        <Button onClick={handleDownload}>
-          <Download className="mr-2" />
-          Download
+        <Button onClick={handleDownload} disabled={isDownloading}>
+          {isDownloading ? (
+            <Loader2 className="mr-2 animate-spin" />
+          ) : (
+            <Download className="mr-2" />
+          )}
+          Download PDF
         </Button>
         <Button onClick={handleShare} variant="secondary">
           <Share2 className="mr-2" />
