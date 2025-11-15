@@ -264,7 +264,7 @@ export function FileUploader() {
             Generated Report Cards ({reportCards.length})
           </h2>
           {reportCards.map((card, index) => (
-            <ReportCardDisplay key={index} htmlContent={card.reportCardHtml} />
+            <ReportCardDisplay key={index} htmlContent={card.reportCardHtml} studentName={`Student ${index + 1}`} />
           ))}
         </div>
       )}
