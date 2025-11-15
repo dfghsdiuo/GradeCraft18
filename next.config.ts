@@ -33,11 +33,7 @@ const nextConfig: NextConfig = {
   serverActions: {
     bodySizeLimit: '2mb',
     // Allow more time for report card generation to complete
-    serverActions: {
-      bodySizeLimit: '2mb',
-      // Allow more time for report card generation to complete
-      timeout: 120,
-    },
+    timeout: 120,
   },
 };
 
