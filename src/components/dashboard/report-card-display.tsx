@@ -157,7 +157,7 @@ export function ReportCardDisplay({
     });
     try {
       const subject = `Report Card for ${studentName}`;
-      const body = `Hello,\n\nPlease find the report card for ${studentName} attached.`;
+      const body = `Hello,\n\nPlease find the report card for ${studentName} attached.\n\nTo share the file, please download the PDF and attach it to your email.`;
       
       // Note: Attaching files via mailto is not reliably supported. 
       // This will open the default mail client with subject and body.
@@ -218,7 +218,7 @@ export function ReportCardDisplay({
         </Button>
         <Button onClick={handleShare} variant="secondary">
           <Share2 className="mr-2" />
-          Share PNG
+          Share
         </Button>
         <Button
           onClick={handleEmailShare}
