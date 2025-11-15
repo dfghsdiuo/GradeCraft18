@@ -77,12 +77,15 @@ const reportCardFlow = ai.defineFlow(
     outputSchema: ReportCardsOutputSchema,
   },
   async (input) => {
-    // This flow processes the entire batch of students sent to it.
-    // The calling client is responsible for breaking large files into smaller batches.
-    const { output } = await prompt(input);
-    if (!output) {
-      throw new Error('The AI model did not return a valid response.');
+    try {
+      const { output } = await prompt(input);
+      if (!output) {
+        throw new Error('The AI model did not return a valid response.');
+      }
+      return output;
+    } catch (error) {
+      console.error('Error in reportCardFlow:', error);
+      throw new Error('The AI model failed to generate a response. Please check your data or try again.');
     }
-    return output;
   }
 );
