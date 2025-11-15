@@ -124,6 +124,15 @@ export default function HistoryPage() {
   };
 
   const handleDownload = async (item: HistoryItem) => {
+    if (!item.studentsData || item.studentsData.length === 0) {
+      toast({
+        title: 'No Student Data',
+        description: 'This history item does not contain any student data to generate report cards from.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setDownloadingId(item.id);
     toast({
       title: 'Generation & Download Started',
@@ -131,7 +140,6 @@ export default function HistoryPage() {
     });
 
     try {
-      const { studentsData, fileName } = item;
       
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -162,7 +170,7 @@ export default function HistoryPage() {
         }
       }
 
-      pdf.save(`${fileName.replace('.xlsx', '')}_report_cards.pdf`);
+      pdf.save(`${item.fileName.replace('.xlsx', '')}_report_cards.pdf`);
 
       toast({
         title: 'Download Complete',
