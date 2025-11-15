@@ -20,6 +20,7 @@ import {
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useState } from 'react';
+import { EmailDialog } from './email-dialog';
 
 interface ReportCardDisplayProps {
   htmlContent: string;
@@ -32,7 +33,8 @@ export function ReportCardDisplay({
 }: ReportCardDisplayProps) {
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
-  
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+
   const getCanvas = async () => {
     const reportElement = document.createElement('div');
     reportElement.innerHTML = htmlContent;
@@ -150,41 +152,42 @@ export function ReportCardDisplay({
     }
   };
 
-  const handleEmailShare = async () => {
+  const handleEmailSend = async (email: string) => {
     toast({
       title: 'Preparing Email...',
       description: 'Please wait a moment.',
     });
     try {
       const subject = `Report Card for ${studentName}`;
-      const body = `Hello,\n\nPlease find the report card for ${studentName} attached.`;
-      const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      
       const pngBlob = await generatePngBlob();
-      if (pngBlob) {
-        const file = new File([pngBlob], `${studentName}_report_card.png`, { type: 'image/png' });
-        // While navigator.share can handle files, mailto links cannot.
-        // We will attempt to use the share API for a better experience.
-        const shareData = {
-          title: subject,
-          text: body,
-          files: [file],
-        };
-        if (navigator.share && navigator.canShare(shareData)) {
-          await navigator.share(shareData);
-          return;
-        }
+      const body = `Hello,\n\nPlease find the report card for ${studentName} attached.`;
+
+      // The best experience is to use the share API with files.
+      if (pngBlob && navigator.share && navigator.canShare) {
+         const file = new File([pngBlob], `${studentName}_report_card.png`, { type: 'image/png' });
+         const shareData = {
+           title: subject,
+           text: `Here is the report card for ${studentName}.`,
+           files: [file],
+         };
+         if (navigator.canShare(shareData)) {
+            await navigator.share(shareData);
+            setIsEmailDialogOpen(false);
+            return;
+         }
       }
-      
-      // Fallback to basic mailto link if share API is not supported or fails
+
+      // Fallback to mailto link
+      const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       window.location.href = mailtoLink;
-      toast({
+      setIsEmailDialogOpen(false);
+       toast({
         title: 'Email Client Opening',
-        description: 'Please attach the downloaded PDF to your email.',
+        description: 'Please attach the downloaded PDF if the image is not already attached.',
       });
 
     } catch (error) {
-      console.error('Error sharing to Email:', error);
+      console.error('Error preparing email:', error);
       toast({
         title: 'Email Failed',
         description: 'Could not open the email client or prepare the file.',
@@ -193,7 +196,9 @@ export function ReportCardDisplay({
     }
   };
 
+
   return (
+    <>
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle>{studentName}</CardTitle>
@@ -239,7 +244,7 @@ export function ReportCardDisplay({
           Share
         </Button>
         <Button
-          onClick={handleEmailShare}
+          onClick={() => setIsEmailDialogOpen(true)}
           variant="secondary"
         >
           <Mail className="mr-2" />
@@ -247,5 +252,12 @@ export function ReportCardDisplay({
         </Button>
       </CardFooter>
     </Card>
+    <EmailDialog
+        isOpen={isEmailDialogOpen}
+        onClose={() => setIsEmailDialogOpen(false)}
+        onSend={handleEmailSend}
+        title={`Email Report Card for ${studentName}`}
+     />
+    </>
   );
 }
