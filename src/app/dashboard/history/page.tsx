@@ -15,6 +15,7 @@ import {
   FileText,
   Trash2,
   History as HistoryIcon,
+  Info,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -28,6 +29,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import Link from 'next/link';
 
 interface HistoryItem {
   id: number;
@@ -87,14 +97,6 @@ export default function HistoryPage() {
         description: "All report card generation history has been removed."
     })
   }
-
-  const handleDownload = (fileName: string) => {
-    toast({
-      title: 'Batch Download Not Supported',
-      description: `Please go to the generator and re-upload the file to download individual report cards.`,
-      variant: 'destructive',
-    });
-  };
 
   const handleShare = (fileName: string) => {
     const subject = `Report Cards Generated: ${fileName}`;
@@ -163,14 +165,36 @@ export default function HistoryPage() {
                   {item.fileCount} report cards
                 </p>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDownload(item.fileName)}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Download
-                  </Button>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Download className="mr-2 h-4 w-4" />
+                        Download
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <Info className="h-6 w-6 text-primary" />
+                          Batch Download Not Available
+                        </DialogTitle>
+                        <DialogDescription className="pt-4 text-base text-foreground">
+                          This application does not store the content of generated report cards. To download the PDFs, you need to re-upload the original Excel file.
+                          <br /><br />
+                          Would you like to go to the Generator page now?
+                        </DialogDescription>
+                      </DialogHeader>
+                      <AlertDialogFooter className="mt-4">
+                        <DialogTrigger asChild>
+                           <Button variant="outline">Cancel</Button>
+                        </DialogTrigger>
+                        <Link href="/dashboard">
+                          <Button>Go to Generator</Button>
+                        </Link>
+                      </AlertDialogFooter>
+                    </DialogContent>
+                  </Dialog>
+
                   <Button
                     variant="secondary"
                     size="sm"
@@ -179,13 +203,25 @@ export default function HistoryPage() {
                     <Mail className="mr-2 h-4 w-4" />
                     Email
                   </Button>
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    onClick={() => handleDelete(item.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="icon">
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Delete History Item?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to delete the history for "{item.fileName}"? This action cannot be undone.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDelete(item.id)}>Continue</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </CardContent>
             </Card>
