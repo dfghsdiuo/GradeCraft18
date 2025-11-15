@@ -13,8 +13,8 @@ import { z } from 'genkit';
 const StudentSchema = z.object({
   "Name": z.string().optional(),
   "Father's Name": z.string().optional(),
-  "Roll No.": z.coerce.string().optional(),
-  "Class": z.coerce.string().optional(),
+  "Roll No.": z.string().optional(),
+  "Class": z.string().optional(),
   // This allows for other properties (the subjects) without defining them explicitly
 }).passthrough().describe('An object representing a single student\'s data, including subjects and marks.');
 
@@ -59,7 +59,7 @@ Your task is to process EACH student's data and calculate the following:
 4.  Calculate the 'Percentage' based on the total obtained and total possible marks.
 5.  Determine the 'Grade' based on the percentage (e.g., A, B, C, F).
 6.  Generate a unique, one-sentence 'remarks' for each student based on their performance, mentioning the student's name for personalization.
-7.  Format the list of subjects and their marks into a JSON string. For example: '[{"name":"Math","marks":85},{"name":"Science","marks":92}]'.
+7.  Format the list of subjects and their marks into a JSON string. For example: '[{\"name\":\"Math\",\"marks\":85},{\"name\":\"Science\",\"marks\":92}]'.
 
 Return an array of objects, where each object contains the original student data, and the calculated 'totalMarks', 'percentage', 'grade', 'subjects' (as a JSON string), and 'remarks'.
 

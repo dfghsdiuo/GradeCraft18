@@ -144,7 +144,18 @@ export function FileUploader() {
       const worksheet = workbook.Sheets[sheetName];
       const studentsData = XLSX.utils.sheet_to_json(worksheet);
       
-      const plainStudentsData = JSON.parse(JSON.stringify(studentsData));
+      const plainStudentsData: any[] = JSON.parse(JSON.stringify(studentsData));
+
+      // Ensure Roll No. and Class are strings to prevent schema validation errors.
+      plainStudentsData.forEach(student => {
+        if (student['Roll No.'] !== undefined) {
+          student['Roll No.'] = String(student['Roll No.']);
+        }
+        if (student['Class'] !== undefined) {
+          student['Class'] = String(student['Class']);
+        }
+      });
+
 
       if (plainStudentsData.length === 0) {
         toast({
@@ -192,11 +203,11 @@ export function FileUploader() {
       });
 
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating report cards:', error);
       toast({
         title: 'Generation Failed',
-        description:
+        description: error.message ||
           'An error occurred while generating the report cards. Please check the file and try again.',
         variant: 'destructive',
       });
