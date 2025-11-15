@@ -52,16 +52,16 @@ const prompt = ai.definePrompt({
   output: { schema: ReportCardsOutputSchema },
   prompt: `You are an expert in processing student data.
 You will be given an array of student data objects in JSON format.
-Your task is to process EACH student's data and calculate the following:
-1.  Identify all numeric subject marks. The subjects are the keys other than 'Name', "Father's Name", 'Roll No.', and 'Class'.
-2.  Calculate the 'Total Obtained' marks by summing up all subject marks.
-3.  Assume 'Total Marks' are 100 for each subject unless specified otherwise.
-4.  Calculate the 'Percentage' based on the total obtained and total possible marks.
-5.  Determine the 'Grade' based on the percentage (e.g., A, B, C, F).
-6.  Generate a unique, one-sentence 'remarks' for each student based on their performance, mentioning the student's name for personalization.
-7.  Format the list of subjects and their marks into a valid, minified JSON string. Example: '[{\"name\":\"Math\",\"marks\":85},{\"name\":\"Science\",\"marks\":92}]'. Ensure there are no trailing commas or syntax errors.
+For each student, you MUST perform the following tasks and structure your response accordingly:
+1.  Identify all numeric subject marks. Subjects are any keys other than 'Name', "Father's Name", 'Roll No.', and 'Class'.
+2.  Calculate the 'totalMarks' by summing all identified subject marks.
+3.  Assume the maximum marks for each subject is 100.
+4.  Calculate the 'percentage' based on the total marks obtained and the total maximum marks.
+5.  Determine the 'grade' (e.g., A+, A, B, C, D, F) based on the calculated percentage.
+6.  Create a 'remarks' string: a unique, personalized, one-sentence comment on the student's performance.
+7.  Format the subjects and their corresponding marks into a valid, minified JSON string for the 'subjects' field. Example: '[{"name":"Math","marks":85},{"name":"Science","marks":92}]'. This string must be perfectly formatted with no syntax errors.
 
-Return an array of objects, where each object contains the original student data, and the calculated 'totalMarks', 'percentage', 'grade', 'subjects' (as a valid JSON string), and 'remarks'.
+Your final output must be a single JSON object with a 'results' key, which contains an array of processed student objects. Each object in the array must include the original 'studentData' and the new fields: 'totalMarks', 'percentage', 'grade', 'subjects', and 'remarks'.
 
 Student Data:
 {{{json studentsData}}}
@@ -75,7 +75,12 @@ const reportCardFlow = ai.defineFlow(
     outputSchema: ReportCardsOutputSchema,
   },
   async (input) => {
+    // This flow processes the entire batch of students sent to it.
+    // The calling client is responsible for breaking large files into smaller batches.
     const { output } = await prompt(input);
-    return output!;
+    if (!output) {
+      throw new Error('The AI model did not return a valid response.');
+    }
+    return output;
   }
 );

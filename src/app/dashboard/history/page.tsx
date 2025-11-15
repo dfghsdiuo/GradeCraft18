@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -31,7 +30,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { generateReportCards, ReportCardsOutput } from '@/ai/flows/report-card-flow';
-import { generateReportCardHtml, Subject } from '@/components/dashboard/report-card-template';
+import { generateReportCardHtml } from '@/components/dashboard/report-card-template';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -43,7 +42,7 @@ interface HistoryItem {
   studentsData: any[];
 }
 
-const BATCH_SIZE = 50;
+const BATCH_SIZE = 50; // Process 50 students per AI call
 
 async function addPageToPdf(pdf: jsPDF, htmlContent: string) {
   const reportElement = document.createElement('div');
@@ -53,8 +52,9 @@ async function addPageToPdf(pdf: jsPDF, htmlContent: string) {
   reportElement.style.width = '210mm'; // A4 width
   document.body.appendChild(reportElement);
 
+  // Optimized scale to reduce memory usage and prevent crashes
   const canvas = await html2canvas(reportElement, {
-    scale: 1.5, // Reduced scale to lower memory usage
+    scale: 1.5,
     useCORS: true,
   });
 

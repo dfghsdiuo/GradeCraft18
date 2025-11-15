@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -12,10 +11,9 @@ import {
 } from '@/ai/flows/report-card-flow';
 import { ReportCardDisplay } from './report-card-display';
 import { Progress } from '@/components/ui/progress';
-import { generateReportCardHtml, Subject } from './report-card-template';
+import { generateReportCardHtml } from './report-card-template';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-
 
 interface HistoryItem {
   id: number;
@@ -30,8 +28,8 @@ interface ReportCardInfo {
   studentName: string;
 }
 
-const BATCH_SIZE = 50;
-const PDF_CHUNK_SIZE = 50;
+const BATCH_SIZE = 50; // Process 50 students per AI call
+const PDF_CHUNK_SIZE = 50; // Download 50 PDFs per file
 
 async function addPageToPdf(pdf: jsPDF, htmlContent: string) {
   const reportElement = document.createElement('div');
@@ -41,8 +39,9 @@ async function addPageToPdf(pdf: jsPDF, htmlContent: string) {
   reportElement.style.width = '210mm'; // A4 width
   document.body.appendChild(reportElement);
 
+  // Optimized scale to reduce memory usage and prevent crashes
   const canvas = await html2canvas(reportElement, {
-    scale: 1.5, // Reduced scale to lower memory usage
+    scale: 1.5,
     useCORS: true,
   });
 
@@ -58,7 +57,6 @@ async function addPageToPdf(pdf: jsPDF, htmlContent: string) {
 
   pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, Math.min(height, pdfHeight));
 }
-
 
 export function FileUploader() {
   const [file, setFile] = useState<File | null>(null);
@@ -388,14 +386,14 @@ export function FileUploader() {
         )}
       </Button>
 
-      {isGenerating || (generationProgress > 0 && generationProgress < 100) ? (
+      {isGenerating && (
         <div className="w-full max-w-2xl text-center">
             <Progress value={generationProgress} className="w-full" />
             <p className="text-sm text-muted-foreground mt-2">Generating {Math.round(generationProgress)}%</p>
         </div>
-      ) : null}
+      )}
 
-      {reportCards.length > 0 && (
+      {reportCards.length > 0 && !isGenerating && (
         <div className="mt-8 w-full max-w-4xl space-y-8">
           <div className="flex flex-col items-center justify-center gap-4">
             <h2 className="text-2xl font-bold tracking-tight text-foreground text-center">
@@ -413,7 +411,7 @@ export function FileUploader() {
               ) : (
                 <>
                   <Download className="mr-2 h-4 w-4" />
-                  Download All as Single PDF
+                  Download All as PDF
                 </>
               )}
             </Button>
@@ -426,4 +424,3 @@ export function FileUploader() {
     </div>
   );
 }
-    
