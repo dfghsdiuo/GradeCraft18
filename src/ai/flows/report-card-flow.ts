@@ -13,8 +13,8 @@ import { z } from 'genkit';
 const StudentSchema = z.object({
   "Name": z.string().optional(),
   "Father's Name": z.string().optional(),
-  "Roll No.": z.any().optional(),
-  "Class": z.any().optional(),
+  "Roll No.": z.coerce.string().optional(),
+  "Class": z.coerce.string().optional(),
   // This allows for other properties (the subjects) without defining them explicitly
 }).passthrough().describe('An object representing a single student\'s data, including subjects and marks.');
 
