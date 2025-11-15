@@ -191,7 +191,7 @@ export function FileUploader() {
     } finally {
       setIsGenerating(false);
       // Ensure progress is 100 at the end, even on failure, to hide the bar.
-      setGenerationProgress(100);
+      setTimeout(() => setGenerationProgress(0), 2000);
     }
   };
 
@@ -265,12 +265,12 @@ export function FileUploader() {
         )}
       </Button>
 
-      {isGenerating && generationProgress < 100 && (
+      {isGenerating || generationProgress > 0 && generationProgress < 100 ? (
         <div className="w-full max-w-2xl text-center">
             <Progress value={generationProgress} className="w-full" />
             <p className="text-sm text-muted-foreground mt-2">Generating {Math.round(generationProgress)}%</p>
         </div>
-      )}
+      ) : null}
 
       {reportCards.length > 0 && (
         <div className="mt-8 w-full max-w-4xl space-y-8">
