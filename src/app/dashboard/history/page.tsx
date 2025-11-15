@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { BatchDownloader } from '@/components/dashboard/batch-downloader';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, deleteDoc, doc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, query, where } from 'firebase/firestore';
 
 interface HistoryItem {
   id: string; // Firestore document ID
@@ -47,17 +47,12 @@ export default function HistoryPage() {
   const firestore = useFirestore();
   const { user } = useUser();
 
-  const historyCollectionRef = useMemoFirebase(
-    () => (user ? collection(firestore, 'report_card_history') : null),
+  const historyQuery = useMemoFirebase(
+    () => (user ? query(collection(firestore, 'report_card_history'), where('userId', '==', user.uid)) : null),
     [firestore, user]
   );
   
-  // This query is not secure, it fetches all history. 
-  // It should be filtered by user, which requires a composite index.
-  // For now, we will filter on the client.
-  const { data: history, isLoading } = useCollection<HistoryItem>(historyCollectionRef);
-
-  const userHistory = history?.filter(item => item.userId === user?.uid) || [];
+  const { data: userHistory, isLoading } = useCollection<HistoryItem>(historyQuery);
 
   const [directDownloadItem, setDirectDownloadItem] = useState<HistoryItem | null>(null);
 
@@ -81,7 +76,7 @@ export default function HistoryPage() {
   };
 
   const handleDeleteAll = async () => {
-    if (!user) return;
+    if (!user || !userHistory) return;
     toast({
       title: 'Deleting history...',
       description: 'Please wait while all items are removed.',
@@ -125,7 +120,7 @@ export default function HistoryPage() {
               Review, share, and download previously generated report card batches.
             </p>
           </div>
-          {userHistory.length > 0 && (
+          {userHistory && userHistory.length > 0 && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive">
@@ -151,7 +146,7 @@ export default function HistoryPage() {
             </AlertDialog>
           )}
         </div>
-        {userHistory.length > 0 ? (
+        {userHistory && userHistory.length > 0 ? (
           <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
             {userHistory.map((item) => (
               <Card
@@ -179,7 +174,7 @@ export default function HistoryPage() {
                         <Button variant="outline" size="sm">
                           <Eye className="mr-2 h-4 w-4" />
                           View
-                        Button>
+                        </Button>
                       }
                       isModal={true}
                     />
