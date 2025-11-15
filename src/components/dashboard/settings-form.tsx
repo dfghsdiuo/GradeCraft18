@@ -3,13 +3,13 @@
 import { useState, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Check } from 'lucide-react';
+import { Check, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import React from 'react';
 
@@ -79,7 +79,8 @@ function ImageUploader({
               className="object-contain rounded-md"
             />
           ) : (
-            label === "School Logo" && schoolLogoPlaceholder && (
+            label === 'School Logo' &&
+            schoolLogoPlaceholder && (
               <Image
                 src={schoolLogoPlaceholder.imageUrl}
                 alt={schoolLogoPlaceholder.description}
@@ -92,10 +93,7 @@ function ImageUploader({
           )}
         </div>
         <div>
-          <Label
-            htmlFor={`upload-${storageKey}`}
-            className="cursor-pointer"
-          >
+          <Label htmlFor={`upload-${storageKey}`} className="cursor-pointer">
             <Button asChild variant="outline">
               <span className="cursor-pointer">Change</span>
             </Button>
@@ -126,16 +124,15 @@ export function SettingsForm() {
     setSessionYear(localStorage.getItem('sessionYear') || '');
   }, []);
 
-  const handleSettingChange = useCallback(
-    (key: string, value: string) => {
-      localStorage.setItem(key, value);
-      toast({
-        title: 'Settings Saved',
-        description: 'Your settings have been saved automatically.',
-      });
-    },
-    [toast]
-  );
+  const handleSave = () => {
+    localStorage.setItem('schoolName', schoolName);
+    localStorage.setItem('sessionYear', sessionYear);
+    localStorage.setItem('themeColor', themeColor);
+    toast({
+      title: 'Settings Saved',
+      description: 'Your changes have been saved successfully.',
+    });
+  };
 
   return (
     <Card className="w-full shadow-lg">
@@ -147,10 +144,7 @@ export function SettingsForm() {
               id="school-name"
               placeholder="e.g., Springfield High"
               value={schoolName}
-              onChange={(e) => {
-                setSchoolName(e.target.value);
-                handleSettingChange('schoolName', e.target.value);
-              }}
+              onChange={(e) => setSchoolName(e.target.value)}
             />
           </div>
           <div className="space-y-2">
@@ -159,10 +153,7 @@ export function SettingsForm() {
               id="session-year"
               placeholder="e.g., 2024-2025"
               value={sessionYear}
-              onChange={(e) => {
-                setSessionYear(e.target.value);
-                handleSettingChange('sessionYear', e.target.value);
-              }}
+              onChange={(e) => setSessionYear(e.target.value)}
             />
           </div>
         </div>
@@ -171,10 +162,7 @@ export function SettingsForm() {
           <Label>Theme Color</Label>
           <RadioGroup
             value={themeColor}
-            onValueChange={(value) => {
-              setThemeColor(value);
-              handleSettingChange('themeColor', value);
-            }}
+            onValueChange={setThemeColor}
             className="flex items-center gap-4"
           >
             {themeColors.map((color) => (
@@ -222,6 +210,12 @@ export function SettingsForm() {
           />
         </div>
       </CardContent>
+      <CardFooter className="flex justify-end bg-card p-4 border-t">
+        <Button onClick={handleSave}>
+          <Save className="mr-2 h-4 w-4" />
+          Save Settings
+        </Button>
+      </CardFooter>
     </Card>
   );
 }
