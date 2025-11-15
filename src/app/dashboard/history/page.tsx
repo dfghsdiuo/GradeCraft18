@@ -141,8 +141,8 @@ export default function HistoryPage() {
 
       let generatedCount = 0;
 
-      for (let i = 0; i < studentsData.length; i += BATCH_SIZE) {
-        const batch = studentsData.slice(i, i + BATCH_SIZE);
+      for (let i = 0; i < item.studentsData.length; i += BATCH_SIZE) {
+        const batch = item.studentsData.slice(i, i + BATCH_SIZE);
         const result: ReportCardsOutput = await generateReportCards({
           studentsData: batch,
         });
@@ -313,5 +313,3 @@ export default function HistoryPage() {
     </div>
   );
 }
-
-    
