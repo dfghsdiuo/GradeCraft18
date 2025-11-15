@@ -38,6 +38,9 @@
         "schoolName": {
           "type": "string"
         },
+        "schoolAddress": {
+            "type": "string"
+        },
         "sessionYear": {
           "type": "string"
         },

@@ -27,6 +27,7 @@ export const generateReportCardHtml = (result: StudentResult, settings?: UserSet
     const studentClass = studentData['Class'] || 'N/A';
 
     const schoolName = settings?.schoolName || "Springfield High";
+    const schoolAddress = settings?.schoolAddress || "";
     const session = settings?.sessionYear || "2024-2025";
     const schoolLogoUrl = settings?.schoolLogo || schoolLogoPlaceholder?.imageUrl || ""; 
     const teacherSignatureUrl = settings?.teacherSignature || "";
@@ -53,6 +54,7 @@ export const generateReportCardHtml = (result: StudentResult, settings?: UserSet
                 </div>
                 <div class="w-1/2">
                     <h1 class="text-4xl font-bold text-blue-700">${schoolName}</h1>
+                    <p class="text-md">${schoolAddress}</p>
                     <p class="text-lg">Final Report Card - Session ${session}</p>
                 </div>
                 <div class="w-1/4"></div>

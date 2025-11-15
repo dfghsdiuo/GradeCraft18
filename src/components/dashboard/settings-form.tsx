@@ -17,6 +17,7 @@ import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { Textarea } from '../ui/textarea';
 
 const themeColors = [
   { name: 'Blue', value: 'blue', className: 'bg-blue-500' },
@@ -114,6 +115,7 @@ function ImageUploader({
 
 export type UserSettings = {
     schoolName: string;
+    schoolAddress: string;
     sessionYear: string;
     themeColor: string;
     schoolLogo: string | null;
@@ -124,6 +126,7 @@ export type UserSettings = {
 
 const defaultSettings: UserSettings = {
     schoolName: 'Springfield High',
+    schoolAddress: '123 Main Street, Springfield, IL',
     sessionYear: '2024-2025',
     themeColor: 'blue',
     schoolLogo: null,
@@ -249,6 +252,16 @@ export function SettingsForm() {
                 onChange={(e) => handleValueChange('sessionYear', e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="school-address">School Address</Label>
+            <Textarea
+              id="school-address"
+              placeholder="123 Main Street, Springfield, IL"
+              value={localSettings.schoolAddress}
+              onChange={(e) => handleValueChange('schoolAddress', e.target.value)}
+            />
           </div>
 
           <div className="space-y-2">
