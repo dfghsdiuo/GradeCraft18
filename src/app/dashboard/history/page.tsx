@@ -109,20 +109,10 @@ export default function HistoryPage() {
   }
 
   const handleDownload = (fileName: string) => {
-    const blob = new Blob([`This is a dummy zip file for ${fileName}. In a real app, this would contain the generated report cards.`], {
-      type: 'application/zip',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
     toast({
-      title: 'Download Started',
-      description: `${fileName} is being downloaded.`,
+      title: 'Batch Download Not Supported',
+      description: `Please go to the generator and re-upload the file to download individual report cards.`,
+      variant: 'destructive',
     });
   };
 
