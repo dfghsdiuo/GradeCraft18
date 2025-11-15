@@ -47,9 +47,10 @@ export function FileUploader() {
       try {
         const storedReportCards = localStorage.getItem('generatedReportCards');
         const storedFileName = localStorage.getItem('lastUploadedFileName');
-        if (storedReportCards) {
+        if (storedReportCards && storedFileName) {
           setReportCards(JSON.parse(storedReportCards));
           setFileName(storedFileName);
+          // Note: The 'file' object itself cannot be restored from localStorage
         }
       } catch (error) {
         console.error('Failed to parse report cards from localStorage', error);
@@ -62,10 +63,11 @@ export function FileUploader() {
   useEffect(() => {
     if (isClient) {
       try {
-        localStorage.setItem('generatedReportCards', JSON.stringify(reportCards));
-        if (fileName) {
-          localStorage.setItem('lastUploadedFileName', fileName);
+        if (reportCards.length > 0 && fileName) {
+            localStorage.setItem('generatedReportCards', JSON.stringify(reportCards));
+            localStorage.setItem('lastUploadedFileName', fileName);
         } else {
+            localStorage.removeItem('generatedReportCards');
             localStorage.removeItem('lastUploadedFileName');
         }
       } catch (error) {
@@ -83,6 +85,10 @@ export function FileUploader() {
             setFile(selectedFile);
             setFileName(selectedFile.name);
             setReportCards([]); // Clear previous results when new file is selected
+            if (isClient) {
+                localStorage.removeItem('generatedReportCards');
+                localStorage.removeItem('lastUploadedFileName');
+            }
         } else {
             toast({
                 title: 'Invalid File Type',
@@ -136,8 +142,8 @@ export function FileUploader() {
       
       const newHistoryItem: HistoryItem = {
         id: Date.now(),
-        fileName: `${name.split('.')[0]}.zip`,
-        date: new Date().toISOString().split('T')[0],
+        fileName: name,
+        date: new Date().toISOString(),
         fileCount: fileCount,
       };
 
@@ -245,7 +251,7 @@ export function FileUploader() {
 
   return (
     <div className="flex w-full flex-col items-center gap-6">
-      {!file && !fileName ? (
+      {!fileName ? (
         <label
           htmlFor="file-upload"
           className={`relative flex w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed bg-accent p-12 text-center transition-colors ${
@@ -309,7 +315,7 @@ export function FileUploader() {
         )}
       </Button>
 
-      {isGenerating || generationProgress > 0 && generationProgress < 100 ? (
+      {isGenerating || (generationProgress > 0 && generationProgress < 100) ? (
         <div className="w-full max-w-2xl text-center">
             <Progress value={generationProgress} className="w-full" />
             <p className="text-sm text-muted-foreground mt-2">Generating {Math.round(generationProgress)}%</p>
@@ -329,3 +335,5 @@ export function FileUploader() {
     </div>
   );
 }
+
+    
