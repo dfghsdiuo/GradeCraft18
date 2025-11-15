@@ -157,8 +157,7 @@ export default function HistoryPage() {
 
         if (result && result.results) {
           for (const [index, res] of result.results.entries()) {
-            const subjects: Subject[] = JSON.parse(res.subjects || '[]');
-            const reportCardHtml = generateReportCardHtml({ ...res, subjects });
+            const reportCardHtml = generateReportCardHtml(res);
             
             if (index > 0 || i > 0) {
               pdf.addPage();

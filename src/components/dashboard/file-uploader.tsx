@@ -220,8 +220,7 @@ export function FileUploader() {
             if (result && result.results) {
               const batchResults = result.results.map(res => {
                   const studentName = res.studentData.Name || 'Unknown Student';
-                  const subjects: Subject[] = JSON.parse(res.subjects || '[]');
-                  const reportCardHtml = generateReportCardHtml({...res, subjects});
+                  const reportCardHtml = generateReportCardHtml(res);
                   return { studentName, reportCardHtml };
               });
               allResults.push(...batchResults);
@@ -427,5 +426,4 @@ export function FileUploader() {
     </div>
   );
 }
-
     

@@ -12,14 +12,22 @@ type StudentResult = {
     totalMarks: number;
     percentage: number;
     grade: string;
-    subjects: Subject[];
+    subjects: string; // Now expecting a JSON string
     remarks: string;
 };
 
 const schoolLogoPlaceholder = PlaceHolderImages.find(p => p.id === 'school_logo');
 
 export const generateReportCardHtml = (result: StudentResult): string => {
-    const { studentData, totalMarks, percentage, grade, subjects, remarks } = result;
+    const { studentData, totalMarks, percentage, grade, remarks } = result;
+
+    let subjects: Subject[] = [];
+    try {
+        subjects = JSON.parse(result.subjects || '[]');
+    } catch (error) {
+        console.error("Failed to parse subjects JSON:", error);
+        // Gracefully handle error by keeping subjects as an empty array
+    }
 
     const studentName = studentData['Name'] || 'N/A';
     const fathersName = studentData["Father's Name"] || 'N/A';
