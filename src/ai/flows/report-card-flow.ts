@@ -10,7 +10,12 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-const StudentSchema = z.record(z.any()).describe('An object representing a single student\'s data, including subjects and marks.');
+const StudentSchema = z.object({
+  "Name": z.string().optional(),
+  "Father's Name": z.string().optional(),
+  "Roll No.": z.any().optional(),
+  "Class": z.any().optional(),
+}).catchall(z.any()).describe('An object representing a single student\'s data, including subjects and marks.');
 
 const ReportCardsInputSchema = z.object({
   studentsData: z
