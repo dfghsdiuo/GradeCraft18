@@ -35,13 +35,11 @@ function ImageUploader({
   description,
   currentValue,
   onValueChange,
-  storageKey,
 }: {
   label: string;
   description: string;
   currentValue: string | null;
   onValueChange: (value: string) => void;
-  storageKey: string;
 }) {
   const { toast } = useToast();
 
@@ -65,6 +63,8 @@ function ImageUploader({
       }
     }
   }, [onValueChange, label, toast]);
+  
+  const id = React.useId();
 
   return (
     <div className="space-y-2">
@@ -93,12 +93,12 @@ function ImageUploader({
           )}
         </div>
         <div>
-          <Label htmlFor={`upload-${storageKey}`} className="cursor-pointer">
+          <Label htmlFor={`upload-${id}`} className="cursor-pointer">
             <Button asChild variant="outline">
               <span className="cursor-pointer">Change</span>
             </Button>
             <input
-              id={`upload-${storageKey}`}
+              id={`upload-${id}`}
               type="file"
               className="hidden"
               accept="image/png, image/jpeg"
@@ -167,7 +167,9 @@ export function SettingsForm() {
   }, []);
   
   const handleGradeRulesChange = useCallback((newRules: GradeRule[]) => {
-    handleValueChange('gradeRules', newRules);
+    // Sort rules by minPercentage descending before saving to state
+    const sortedRules = [...newRules].sort((a, b) => b.minPercentage - a.minPercentage);
+    handleValueChange('gradeRules', sortedRules);
   }, [handleValueChange]);
 
   const handleSave = async () => {
@@ -206,9 +208,6 @@ export function SettingsForm() {
         setIsSaving(false);
       });
   };
-  
-  const memoizedHandleValueChange = useCallback(handleValueChange, [handleValueChange]);
-
 
   if (isLoadingSettings || !localSettings) {
     return (
@@ -217,6 +216,15 @@ export function SettingsForm() {
       </div>
     );
   }
+  
+  const memoizedImageUploader = (label: string, storageKey: keyof UserSettings, description: string) => (
+    <ImageUploader
+      label={label}
+      description={description}
+      currentValue={localSettings[storageKey] as string | null}
+      onValueChange={(value) => handleValueChange(storageKey, value)}
+    />
+  )
 
   return (
     <div className="space-y-8">
@@ -229,7 +237,7 @@ export function SettingsForm() {
                 id="school-name"
                 placeholder="e.g., Springfield High"
                 value={localSettings.schoolName}
-                onChange={(e) => memoizedHandleValueChange('schoolName', e.target.value)}
+                onChange={(e) => handleValueChange('schoolName', e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -238,7 +246,7 @@ export function SettingsForm() {
                 id="session-year"
                 placeholder="e.g., 2024-2025"
                 value={localSettings.sessionYear}
-                onChange={(e) => memoizedHandleValueChange('sessionYear', e.target.value)}
+                onChange={(e) => handleValueChange('sessionYear', e.target.value)}
               />
             </div>
           </div>
@@ -247,7 +255,7 @@ export function SettingsForm() {
             <Label>Theme Color</Label>
             <RadioGroup
               value={localSettings.themeColor}
-              onValueChange={(value) => memoizedHandleValueChange('themeColor', value)}
+              onValueChange={(value) => handleValueChange('themeColor', value)}
               className="flex items-center gap-4"
             >
               {themeColors.map((color) => (
@@ -278,27 +286,9 @@ export function SettingsForm() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <ImageUploader
-              label="School Logo"
-              description="PNG with transparent background recommended."
-              storageKey="schoolLogo"
-              currentValue={localSettings.schoolLogo}
-              onValueChange={(value) => memoizedHandleValueChange('schoolLogo', value)}
-            />
-            <ImageUploader
-              label="Class Teacher's Signature"
-              description="Upload a clear signature."
-              storageKey="teacherSignature"
-              currentValue={localSettings.teacherSignature}
-              onValueChange={(value) => memoizedHandleValueChange('teacherSignature', value)}
-            />
-            <ImageUploader
-              label="Principal's Signature"
-              description="Upload a clear signature."
-              storageKey="principalSignature"
-              currentValue={localSettings.principalSignature}
-              onValueChange={(value) => memoizedHandleValueChange('principalSignature', value)}
-            />
+             {memoizedImageUploader("School Logo", "schoolLogo", "PNG with transparent background recommended.")}
+             {memoizedImageUploader("Class Teacher's Signature", "teacherSignature", "Upload a clear signature.")}
+             {memoizedImageUploader("Principal's Signature", "principalSignature", "Upload a clear signature.")}
           </div>
         </CardContent>
       </Card>

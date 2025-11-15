@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Share2, Eye, Loader2, Mail } from 'lucide-react';
+import { Download, Share2, Eye, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -92,7 +92,6 @@ export function ReportCardDisplay({
         description: `PDF report card for ${studentName} is downloading.`,
       });
     } catch (error) {
-       console.error('Error generating PDF:', error);
        toast({
         title: 'Download Failed',
         description: 'Could not generate the PDF file at this time.',

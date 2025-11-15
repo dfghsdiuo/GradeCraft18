@@ -21,7 +21,7 @@ import { Progress } from '@/components/ui/progress';
 import { generateReportCardHtml } from './report-card-template';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { GradeRule, UserSettings } from './settings-form';
+import { UserSettings } from './settings-form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -46,7 +46,7 @@ async function addPageToPdf(pdf: jsPDF, htmlContent: string) {
   document.body.appendChild(reportElement);
 
   const canvas = await html2canvas(reportElement, {
-    scale: 1.5, // Reduced scale to prevent crashes with large files
+    scale: 1.5, // Optimized scale to prevent crashes with large files
     useCORS: true,
   });
 
@@ -142,10 +142,7 @@ export function BatchDownloader({
             successfulGenerations += result.results.length;
           }
         } catch (error) {
-          console.error(
-            `Error generating report card for batch starting at index ${i}:`,
-            error
-          );
+          // Error is now thrown from the flow, toast is handled globally by server action wrapper
         }
         setGenerationProgress(
           ((i + batch.length) / plainStudentsData.length) * 100
@@ -164,7 +161,6 @@ export function BatchDownloader({
       }
 
     } catch (error: any) {
-      console.error('Error generating report cards:', error);
       toast({
         title: 'Generation Failed',
         description:
@@ -179,10 +175,11 @@ export function BatchDownloader({
   }, [isGenerating, user, studentsData, toast, onComplete, isModal, settingsDocRef, userSettings]);
   
   useEffect(() => {
-    if ((isOpen || !isModal) && studentsData.length > 0 && reportCards.length === 0) {
+    // Only generate if the data is available and generation hasn't started
+    if ((isOpen || !isModal) && studentsData.length > 0 && reportCards.length === 0 && !isGenerating) {
       handleGenerate();
     }
-  }, [isOpen, isModal, studentsData, reportCards, handleGenerate]);
+  }, [isOpen, isModal, studentsData, reportCards, handleGenerate, isGenerating]);
   
   
   const handleDownloadAll = useCallback(async () => {
@@ -239,7 +236,6 @@ export function BatchDownloader({
         }`,
       });
     } catch (error: any) {
-      console.error('Error generating combined PDF:', error);
       toast({
         title: 'Download Failed',
         description:
@@ -253,10 +249,10 @@ export function BatchDownloader({
   }, [reportCardHtmls, fileName, onComplete, toast]);
 
   useEffect(() => {
-      if (!isModal && reportCardHtmls.length > 0 && !isGenerating) {
+      if (!isModal && reportCardHtmls.length > 0 && !isGenerating && !isDownloading) {
         handleDownloadAll();
       }
-  }, [reportCardHtmls, isModal, isGenerating, handleDownloadAll]);
+  }, [reportCardHtmls, isModal, isGenerating, handleDownloadAll, isDownloading]);
 
 
   const content = (
