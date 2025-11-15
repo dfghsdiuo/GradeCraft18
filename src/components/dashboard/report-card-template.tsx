@@ -2,7 +2,7 @@
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 
-type Subject = {
+export type Subject = {
     name: string;
     marks: number;
 };

@@ -31,10 +31,7 @@ const StudentResultSchema = z.object({
   totalMarks: z.number().describe('The calculated total marks obtained by the student.'),
   percentage: z.number().describe('The calculated overall percentage.'),
   grade: z.string().describe('The calculated overall grade.'),
-  subjects: z.array(z.object({
-    name: z.string(),
-    marks: z.number(),
-  })).describe("An array of subjects and their marks for the student."),
+  subjects: z.string().describe("A JSON string representing an array of subjects and their marks for the student, like '[{\"name\":\"Math\",\"marks\":85}]'."),
   remarks: z.string().describe("A unique, one-sentence remark based on the student's performance.")
 });
 
@@ -56,15 +53,15 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert in processing student data.
 You will be given an array of student data objects in JSON format.
 Your task is to process EACH student's data and calculate the following:
-1.  Identify all numeric subject marks. The subjects are the keys other than 'Name', 'Father\'s Name', 'Roll No.', and 'Class'.
+1.  Identify all numeric subject marks. The subjects are the keys other than 'Name', "Father's Name", 'Roll No.', and 'Class'.
 2.  Calculate the 'Total Obtained' marks by summing up all subject marks.
 3.  Assume 'Total Marks' are 100 for each subject unless specified otherwise.
 4.  Calculate the 'Percentage' based on the total obtained and total possible marks.
 5.  Determine the 'Grade' based on the percentage (e.g., A, B, C, F).
-6.  List the subjects and their marks.
-7.  Generate a unique, one-sentence 'remarks' for each student based on their performance.
+6.  Generate a unique, one-sentence 'remarks' for each student based on their performance.
+7.  Format the list of subjects and their marks into a JSON string. For example: '[{"name":"Math","marks":85},{"name":"Science","marks":92}]'.
 
-Return an array of objects, where each object contains the original student data, and the calculated 'totalMarks', 'percentage', 'grade', 'subjects', and 'remarks'.
+Return an array of objects, where each object contains the original student data, and the calculated 'totalMarks', 'percentage', 'grade', 'subjects' (as a JSON string), and 'remarks'.
 
 Student Data:
 {{{json studentsData}}}

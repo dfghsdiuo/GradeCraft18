@@ -11,7 +11,7 @@ import {
 } from '@/ai/flows/report-card-flow';
 import { ReportCardDisplay } from './report-card-display';
 import { Progress } from '@/components/ui/progress';
-import { generateReportCardHtml } from './report-card-template';
+import { generateReportCardHtml, Subject } from './report-card-template';
 
 interface HistoryItem {
   id: number;
@@ -163,7 +163,9 @@ export function FileUploader() {
             if (result && result.results) {
               const batchResults = result.results.map(res => {
                   const studentName = res.studentData.Name || 'Unknown Student';
-                  const reportCardHtml = generateReportCardHtml(res);
+                  // The AI now returns a JSON string for subjects, so we need to parse it.
+                  const subjects: Subject[] = JSON.parse(res.subjects || '[]');
+                  const reportCardHtml = generateReportCardHtml({...res, subjects});
                   return { studentName, reportCardHtml };
               });
               allResults.push(...batchResults);
